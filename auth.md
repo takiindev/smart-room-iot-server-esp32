@@ -20,15 +20,15 @@
 
 | Tên trường | Loại | Bắt buộc | Mô tả |
 | :--------- | :--- | :------- | :---- |
-| username | string | Có | Tên đăng nhập (mặc định: `admin`) |
-| password | string | Có | Mật khẩu đăng nhập (mặc định: `123456789`) |
+| username | string | Có | Tên đăng nhập |
+| password | string | Có | Mật khẩu đăng nhập|
 
 ### Request Example
 
 ```json
 {
 	"username": "admin",
-	"password": "123456789"
+	"password": "admin123"
 }
 ```
 
@@ -89,7 +89,5 @@ Sau khi đăng nhập thành công, server trả về JWT token với các thôn
 
 - Token được sử dụng trong header `Authorization: Bearer <token>` cho các API điều khiển thiết bị
 - Token có thời gian sống là 1 giờ kể từ lúc phát hành
-- Thiết bị yêu cầu đồng bộ thời gian với NTP server để xác thực token
-- Tài khoản mặc định: `admin` / `123456789`
 
 </details>
