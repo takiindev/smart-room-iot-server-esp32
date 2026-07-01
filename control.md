@@ -27,8 +27,8 @@
 | :--------- | :--- | :------- | :---- |
 | naturalId | string | Có | Định danh thiết bị cần điều khiển |
 | category | string | Có | Loại thiết bị. Hiện tại chỉ nhận <code>LIGHTING</code> hoặc <code>FAN</code> |
-| power | string | Có | Trạng thái điều khiển. Với <code>LIGHTING</code> nhận <code>ON</code> / <code>OFF</code>, với <code>FAN</code> nhận <code>ON</code> / <code>OFF</code> |
-| speed | number | Không | Chỉ dùng cho <code>FAN</code> khi <code>power = ON</code>. Giá trị hợp lệ: 1, 2, 3 |
+| power | string | Không | Trạng thái điều khiển. Nếu có thì với <code>LIGHTING</code> nhận <code>ON</code> / <code>OFF</code>, với <code>FAN</code> nhận <code>ON</code> / <code>OFF</code> |
+| speed | number | Không | Chỉ dùng cho <code>FAN</code> khi cần chọn mức quạt. Giá trị hợp lệ: 1, 2, 3 |
 
 ### Request Example - LIGHTING
 
@@ -46,7 +46,6 @@
 {
 	"naturalId": "Fan_01",
 	"category": "FAN",
-	"power": "ON",
 	"speed": 2
 }
 ```
@@ -122,16 +121,15 @@
 
 #### LIGHTING
 
-- `power` bắt buộc có giá trị `ON` hoặc `OFF`
+- `power` là tùy chọn, nếu gửi thì phải có giá trị `ON` hoặc `OFF`
 - Thiết bị được map theo `naturalId`
 - Firmware điều khiển relay ở chân GPIO đầu tiên của thiết bị
 
 #### FAN
 
-- `power = OFF`: tắt toàn bộ GPIO của quạt
-- `power = ON`: phải có thêm `speed`
-- `speed` chỉ nhận giá trị `1`, `2`, `3`
-- Firmware sẽ tắt toàn bộ chân quạt trước khi bật chân tương ứng với tốc độ
+- `power` là tùy chọn, nếu gửi thì phải có giá trị `ON` hoặc `OFF`
+- `speed` là tùy chọn, nếu gửi thì chỉ nhận giá trị `1`, `2`, `3`
+- Firmware sẽ tắt toàn bộ chân quạt trước khi bật chân tương ứng với tốc độ hoặc mức GPIO tương ứng
 
 ### Lưu ý
 
@@ -139,5 +137,6 @@
 - `naturalId` phải trùng với cấu hình thiết bị đã nạp trong firmware
 - JWT token phải được gửi qua header `Authorization: Bearer <token>`
 - Nếu body trống hoặc JSON không hợp lệ, server sẽ trả lỗi `400`
+- Nếu không gửi `power`, firmware sẽ chỉ dựa vào `naturalId`, `category`, và `speed` để xử lý theo luồng hiện có
 
 </details>
