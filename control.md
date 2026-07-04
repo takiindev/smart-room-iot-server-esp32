@@ -9,7 +9,7 @@
 
 > API này dùng để điều khiển các thiết bị đang được hỗ trợ trong firmware hiện tại. 
 > 
-> Hiện tại chỉ hỗ trợ 2 nhóm: <code>LIGHTING</code> và <code>FAN</code>.
+> Hiện tại chỉ hỗ trợ 2 nhóm: <code>LIGHT</code> và <code>FAN</code>.
 > 
 > Request bắt buộc phải có JWT token hợp lệ trong header <code>Authorization</code>.
 
@@ -54,9 +54,9 @@
 
 ```json
 {
-	"statusCode": 200,
-	"success": true,
-	"message": "Điều khiển thành công"
+	"status": 200,
+	"message": "Điều khiển thành công",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -64,9 +64,9 @@
 
 ```json
 {
-	"statusCode": 200,
-	"success": true,
-	"message": "Không có cấu hình nào được thay đổi"
+	"status": 200,
+	"message": "Không có cấu hình nào được thay đổi",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -76,9 +76,9 @@
 
 ```json
 {
-	"statusCode": 400,
-	"success": false,
-	"message": "Body bắt buộc phải có các trường: naturalId, category"
+	"status": 400,
+	"message": "Body bắt buộc phải có các trường: naturalId, category",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -88,9 +88,9 @@
 
 ```json
 {
-	"statusCode": 401,
-	"success": false,
-	"message": "Token hết hạn hoặc không đúng"
+	"status": 401,
+	"message": "Token hết hạn hoặc không đúng",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -100,9 +100,9 @@
 
 ```json
 {
-	"statusCode": 404,
-	"success": false,
-	"message": "Không tìm thấy thiết bị có naturalId tương ứng"
+	"status": 404,
+	"message": "Không tìm thấy thiết bị có naturalId tương ứng",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -113,7 +113,8 @@
 ```json
 {
 	"status": 500,
-	"message": "Lỗi thiết bị khi parse JSON"
+	"message": "Lỗi thiết bị khi parse JSON",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 

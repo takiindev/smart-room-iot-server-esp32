@@ -4,12 +4,12 @@
 
 ---
 
-<details>
-<summary><b>GET</b> <code>/setup</code> - Lấy JSON cấu hình thiết bị</summary>
+### **GET** `/setup` - Lấy JSON cấu hình thiết bị
+
 
 > API này dùng để lấy toàn bộ JSON cấu hình thiết bị hiện đang được firmware nạp trong bộ nhớ.
 > 
-> Request bắt buộc phải có JWT token hợp lệ trong header <code>Authorization</code>.
+> Request bắt buộc phải có JWT token hợp lệ trong header `Authorization`.
 
 ### Request Headers
 
@@ -26,11 +26,11 @@
 
 ```json
 {
-	"statusCode": 200,
-	"success": true,
+	"status": 200,
 	"message": "Lấy JSON cấu hình thiết bị thành công",
 	"data": {
-		"configDevice": [
+		"roomCode": "A101",
+		"devices": [
 			{
 				"naturalId": "LIGHT_01",
 				"category": "LIGHTING",
@@ -45,11 +45,13 @@
 					}
 				},
 				"peripheralType": "RELAY",
+				"controlType": "GPIO",
 				"specificType": "GPIO",
 				"gpioPin": [13]
 			}
 		]
-	}
+	},
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -59,9 +61,9 @@
 
 ```json
 {
-	"statusCode": 401,
-	"success": false,
-	"message": "Token hết hạn hoặc không đúng"
+	"status": 401,
+	"message": "Token hết hạn hoặc không đúng",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -75,5 +77,3 @@
 - `naturalId` và `category` trong dữ liệu này phải khớp với cấu hình điều khiển thực tế
 - JWT token phải được gửi qua header `Authorization: Bearer <token>`
 - Nếu không có header Authorization hoặc token sai, server sẽ trả lỗi `401`
-
-</details>

@@ -36,10 +36,12 @@
 
 ```json
 {
-	"statusCode": 200,
-	"success": true,
+	"status": 200,
 	"message": "Đăng nhập thành công",
-	"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6InN1cGVyX3VzZXIiLCJleHAiOjE3NDg3NjU0MzJ9.signature"
+	"data": {
+		"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6InN1cGVyX3VzZXIiLCJleHAiOjE3NDg3NjU0MzJ9.signature"
+	},
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -47,9 +49,9 @@
 
 ```json
 {
-	"statusCode": 401,
-	"success": false,
-	"message": "username hoặc password không đúng"
+	"status": 401,
+	"message": "username hoặc password không đúng",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -59,9 +61,9 @@
 
 ```json
 {
-	"statusCode": 500,
-	"success": false,
-	"message": "Server chưa đồng bộ xong thời gian, hãy thử lại sau vài giây!"
+	"status": 500,
+	"message": "Server chưa đồng bộ xong thời gian, hãy thử lại sau vài giây!",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -69,9 +71,9 @@
 
 ```json
 {
-	"statusCode": 400,
-	"success": false,
-	"message": "Thiếu body request hoặc body không đúng định dạng"
+	"status": 400,
+	"message": "Thiếu body request hoặc body không đúng định dạng",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 

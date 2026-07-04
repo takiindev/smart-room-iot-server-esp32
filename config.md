@@ -4,14 +4,14 @@
 
 ---
 
-<details>
-<summary><b>PATCH</b> <code>/config</code> - Cập nhật JSON cấu hình thiết bị</summary>
+### **PATCH** `/config` - Cập nhật JSON cấu hình thiết bị
+
 
 > API này dùng để cập nhật toàn bộ JSON cấu hình thiết bị đang được firmware sử dụng trong bộ nhớ.
 > 
 > Dữ liệu mới sẽ được ghi đè lên cấu hình hiện tại và áp dụng lại cho các relay sau khi lưu thành công.
 > 
-> Request bắt buộc phải có JWT token hợp lệ trong header <code>Authorization</code>.
+> Request bắt buộc phải có JWT token hợp lệ trong header `Authorization`.
 
 ### Request Headers
 
@@ -31,10 +31,11 @@
 
 ```json
 {
-	"configDevice": [
+	"roomCode": "R-VU",
+	"devices": [
 		{
 			"naturalId": "LIGHT_01",
-			"category": "LIGHTING",
+			"category": "LIGHT",
 			"translations": {
 				"vi": {
 					"name": "Đèn A101 1",
@@ -46,6 +47,7 @@
 				}
 			},
 			"peripheralType": "RELAY",
+			"controlType": "GPIO",
 			"specificType": "GPIO",
 			"gpioPin": [13]
 		},
@@ -63,6 +65,7 @@
 				}
 			},
 			"peripheralType": "RELAY",
+			"controlType": "GPIO",
 			"specificType": "GPIO",
 			"gpioPin": [14, 27, 26]
 		}
@@ -74,21 +77,21 @@
 
 ```json
 {
-	"statusCode": 200,
-	"success": true,
-	"message": "Cập nhật JSON cấu hình thiết bị thành công"
+	"status": 200,
+	"message": "Cập nhật JSON cấu hình thiết bị thành công",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
 ### Response (400 Bad Request)
 
-> Xảy ra khi body trống, JSON không hợp lệ, hoặc thiếu trường <code>configDevice</code>.
+> Xảy ra khi body trống, JSON không hợp lệ, hoặc thiếu trường `configDevice`.
 
 ```json
 {
-	"statusCode": 400,
-	"success": false,
-	"message": "Thiếu trường configDevice hoặc không hợp lệ"
+	"status": 400,
+	"message": "Thiếu trường configDevice hoặc không hợp lệ",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -98,9 +101,9 @@
 
 ```json
 {
-	"statusCode": 401,
-	"success": false,
-	"message": "Token hết hạn hoặc không đúng"
+	"status": 401,
+	"message": "Token hết hạn hoặc không đúng",
+	"timestamp": "2026-07-03T12:31:09Z"
 }
 ```
 
@@ -110,5 +113,3 @@
 - Sau khi cập nhật thành công, firmware sẽ lưu cấu hình mới vào bộ nhớ và khởi tạo lại các chân relay
 - JWT token phải được gửi qua header `Authorization: Bearer <token>`
 - Nếu body trống hoặc không có `configDevice`, server sẽ trả lỗi `400`
-
-</details>
