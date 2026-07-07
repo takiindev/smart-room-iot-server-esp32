@@ -31,48 +31,44 @@ String config = R"rawliteral({
         }
       },
       "internal": {
-        "peripheralType": "IRSEND",
+        "peripheralType": "IR_SENDER",
         "brand": "LG",
         "codeConfigs": {
-          "bits": 28,
           "power": {
-            "ON": "0x20DF10EF",
-            "OFF": "0x20DF906F"
+            "ON": "0x8800F43",
+            "OFF": "0x88C0051"
           },
           "mode": {
-            "COOL": "0x20DF40BF",
-            "HEAT": "0x20DFC03F",
-            "DRY": "0x20DF00FF",
-            "FAN": "0x20DF807F",
-            "AUTO": "0x20DFA05F"
+            "COOL": "0x8808F4B",
+            "HEAT": "0x880C556",
+            "DRY": "0x880910A",
+            "FAN": "0x880A30D",
+            "AUTO": "0x880B151"
           },
           "speed": {
-            "1": "0x20DF30CF",
-            "2": "0x20DFB04F",
-            "3": "0x20DF708F",
-            "4": "0x20DFF00F",
-            "5": "0x20DF50AF"
+            "1": "0x880A30D",
+            "2": "0x880A32F",
+            "3": "0x880A341"
           },
           "temperature": {
-            "16": "0x20DF906F",
-            "17": "0x20DF10EF",
-            "18": "0x20DF50AF",
-            "19": "0x20DFF00F",
-            "20": "0x20DF708F",
-            "21": "0x20DFC03F",
-            "22": "0x20DF40BF",
-            "23": "0x20DFB04F",
-            "24": "0x20DF30CF",
-            "25": "0x20DFA05F",
-            "26": "0x20DFE01F",
-            "27": "0x20DF609F",
-            "28": "0x20DFA05F",
-            "29": "0x20DFC03F",
-            "30": "0x20DF40BF"
+            "16": "0x880A14F",
+            "17": "0x880A163",
+            "18": "0x880A177",
+            "19": "0x880A18B",
+            "20": "0x880A19F",
+            "21": "0x880A1B3",
+            "22": "0x880A1C7",
+            "23": "0x880A1DB",
+            "24": "0x880A1EF",
+            "25": "0x880A203",
+            "26": "0x880A217",
+            "27": "0x880A22B",
+            "28": "0x880A23F",
+            "29": "0x880A253",
+            "30": "0x880A267"
           },
           "swing": {
-            "ON": "0x20DFA05F",
-            "OFF": "0x20DFC03F"
+            "ON": "0x8810001"
           }
         }
       }
@@ -141,17 +137,18 @@ IRsend irsend(kIrLedPin);
 char secret_key[] = "Vudeptrai@123";
 CustomJWT jwt(secret_key, 256);
 
-// const char *ssid = "A101CNTT";
-// const char *password = "fit@123456789";
-// IPAddress local_IP(172, 16, 64, 200);
-// IPAddress gateway(172, 16, 0, 1);
-// IPAddress subnet(255, 255, 0, 0);
+const char *ssid = "A101CNTT";
+const char *password = "fit@123456789";
+IPAddress local_IP(172, 16, 64, 200);
+IPAddress gateway(172, 16, 0, 1);
+IPAddress subnet(255, 255, 0, 0);
 
-const char *ssid = "ThanhLoi";
-const char *password = "bichloi123";
-IPAddress local_IP(192, 168, 1, 200);
-IPAddress gateway(192, 168, 1, 1);
-IPAddress subnet(255, 255, 255, 0);
+// const char *ssid = "ThanhLoi";
+// const char *password = "bichloi123";
+// IPAddress local_IP(192, 168, 1, 200);
+// IPAddress gateway(192, 168, 1, 1);
+// IPAddress subnet(255, 255, 255, 0);
+
 
 IPAddress primaryDNS(8, 8, 8, 8);
 IPAddress secondaryDNS(8, 8, 4, 4);
@@ -544,8 +541,8 @@ bool getAcCommandCodeFromConfig(const JsonDocument &configDoc, const String &nat
   // Get internal object
   JsonObjectConst internalObj = targetDevice["internal"].as<JsonObjectConst>();
   // in ra nội dung của internalObj để debug
-  // String internalStr;
-  // serializeJson(internalObj, internalStr);
+  String internalStr;
+  serializeJson(internalObj, internalStr);
   // Serial.printf("-> internalObj: %s\n", internalStr.c_str());
   // Get and verify peripheralType
   if (!internalObj.containsKey("peripheralType"))
@@ -1390,9 +1387,9 @@ void handleControl()
       }
 
       int speed = jsonBody.containsKey("speed") ? jsonBody["speed"] : jsonBody["fanSpeed"];
-      if (speed < 1 || speed > 5)
+      if (speed < 1 || speed > 3)
       {
-        sendJson(400, "speed chỉ nhận giá trị từ 1 đến 5");
+        sendJson(400, "speed chỉ nhận giá trị từ 1 đến 3");
         Serial.println("------------------------------------------");
         return;
       }

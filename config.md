@@ -40,12 +40,17 @@
 					"peripheralType": "IR_SENDER",
 					"brand": "LG",
 					"codeConfigs": {
-						"bits": 28,
-						"power": { "ON": "0x20DF10EF", "OFF": "0x20DF906F" },
-						"mode": { "COOL": "0x20DF40BF", "HEAT": "0x20DFC03F", "DRY": "0x20DF00FF", "FAN": "0x20DF807F", "AUTO": "0x20DFA05F" },
-						"speed": { "1": "0x20DF30CF", "2": "0x20DFB04F", "3": "0x20DF708F", "4": "0x20DFF00F", "5": "0x20DF50AF" },
-						"temperature": { "16": "0x20DF906F", "17": "0x20DF10EF", ... },
-						"swing": { "ON": "0x20DFA05F", "OFF": "0x20DFC03F" }
+						"power": { "ON": "0x8800F43", "OFF": "0x88C0051" },
+						"mode": { 
+							"COOL": "0x8808F4B",
+							"HEAT": "0x880C556",
+							"DRY": "0x880910A",
+							"FAN": "0x880A30D",
+							"AUTO": "0x880B151"
+						},
+						"speed": { "1": "0x880A30D", "2": "0x880A32F", "3": "0x880A341" },
+						"temperature": { "16": "0x880A14F", "17": "0x880A163", "18": "0x880A177", "19": "0x880A18B", "20": "0x880A19F", "21": "0x880A1B3", "22": "0x880A1C7", "23": "0x880A1DB", "24": "0x880A1EF", "25": "0x880A203", "26": "0x880A217", "27": "0x880A22B", "28": "0x880A23F", "29": "0x880A253", "30": "0x880A267" },
+						"swing": { "ON": "0x8810001" }
 					}
 				}
 			},
@@ -134,12 +139,17 @@
 				"peripheralType": "IR_SENDER",
 				"brand": "LG",
 				"codeConfigs": {
-					"bits": 28,
-					"power": { "ON": "0x20DF10EF", "OFF": "0x20DF906F" },
-					"mode": { "COOL": "0x20DF40BF", "HEAT": "0x20DFC03F", "DRY": "0x20DF00FF", "FAN": "0x20DF807F", "AUTO": "0x20DFA05F" },
-					"speed": { "1": "0x20DF30CF", "2": "0x20DFB04F", "3": "0x20DF708F", "4": "0x20DFF00F", "5": "0x20DF50AF" },
-					"temperature": { "16": "0x20DF906F", "17": "0x20DF10EF", "18": "0x20DF50AF", "19": "0x20DFF00F", "20": "0x20DF708F", "21": "0x20DFC03F", "22": "0x20DF40BF", "23": "0x20DFB04F", "24": "0x20DF30CF", "25": "0x20DFA05F", "26": "0x20DFE01F", "27": "0x20DF609F", "28": "0x20DFA05F", "29": "0x20DFC03F", "30": "0x20DF40BF" },
-					"swing": { "ON": "0x20DFA05F", "OFF": "0x20DFC03F" }
+					"power": { "ON": "0x8800F43", "OFF": "0x88C0051" },
+					"mode": { 
+						"COOL": "0x8808F4B",
+						"HEAT": "0x880C556",
+						"DRY": "0x880910A",
+						"FAN": "0x880A30D",
+						"AUTO": "0x880B151"
+					},
+					"speed": { "1": "0x880A30D", "2": "0x880A32F", "3": "0x880A341" },
+					"temperature": { "16": "0x880A14F", "17": "0x880A163", "18": "0x880A177", "19": "0x880A18B", "20": "0x880A19F", "21": "0x880A1B3", "22": "0x880A1C7", "23": "0x880A1DB", "24": "0x880A1EF", "25": "0x880A203", "26": "0x880A217", "27": "0x880A22B", "28": "0x880A23F", "29": "0x880A253", "30": "0x880A267" },
+					"swing": { "ON": "0x8810001" }
 				}
 			}
 		},
@@ -240,21 +250,34 @@
 		"peripheralType": "IR_SENDER",
 		"brand": "LG",
 		"codeConfigs": {
-			"bits": 28,
-			"power": { "ON": "0x...", "OFF": "0x..." },
-			"mode": { "COOL": "0x...", "HEAT": "0x...", ... },
-			"speed": { "1": "0x...", "2": "0x...", ... },
-			"temperature": { "16": "0x...", "17": "0x...", ... },
-			"swing": { "ON": "0x...", "OFF": "0x..." }
+			"power": { "ON": "0x8800F43", "OFF": "0x88C0051" },
+			"mode": { 
+				"COOL": "0x8808F4B", "HEAT": "0x880C556",
+				"DRY": "0x880910A", "FAN": "0x880A30D", "AUTO": "0x880B151"
+			},
+			"speed": { "1": "0x880A30D", "2": "0x880A32F", "3": "0x880A341" },
+			"temperature": { "16": "0x880A14F", "17": "0x880A163", ..., "30": "0x880A267" },
+			"swing": { "ON": "0x8810001" }
 		}
 	}
 }
 ```
 
+**Lưu ý về IR codes:**
+- Mã IR phải là chuỗi hex, bắt đầu với `0x`
+- Không cần field `bits` (mặc định LG = 28 bits, Samsung = 36, Panasonic = 48)
+- Section `swing` có thể chỉ có `ON` (như LG) hoặc có cả `ON` và `OFF` tùy thiết bị
+- Section `speed` thường có 3-5 levels tùy hãng và model AC
+
 ### Lưu ý
 
 - Cấu hình phải có `roomCode` và mảng `devices`
 - Mỗi device phải có `internal` object với `peripheralType`
-- Thiết bị IR_SENDER phải có `internal.brand` và `internal.codeConfigs` 
-- Sau khi cập nhật thành công, firmware sẽ lưu cấu hình mới vào bộ nhớ
+- **Thiết bị IR_SENDER phải có:**
+  - `internal.brand`: Tên hãng (LG, SAMSUNG, PANASONIC)
+  - `internal.codeConfigs`: Object chứa tất cả mã IR
+  - Các sections trong `codeConfigs`: `power`, `mode`, `speed`, `temperature`, `swing`
+  - Mỗi mã IR phải là chuỗi hex bắt đầu với `0x`
+- Sau khi cập nhật thành công, firmware sẽ lưu cấu hình mới vào bộ nhớ Preferences
+- Firmware sẽ tự động re-init các relay pins khi có thay đổi config
 - JWT token phải được gửi qua header `Authorization: Bearer <token>`

@@ -152,17 +152,30 @@
 {
 	"naturalId": "LABAC1",
 	"category": "AIR_CONDITION",
-	"speed": 3
+	"fanSpeed": 2
 }
 ```
 
-### Request Example - Bật/tắt swing
+### Request Example - Bật swing
 
 ```json
 {
 	"naturalId": "LABAC1",
 	"category": "AIR_CONDITION",
 	"swing": "ON"
+}
+```
+
+### Request Example - Kết hợp nhiều tham số
+
+```json
+{
+	"naturalId": "LABAC1",
+	"category": "AIR_CONDITION",
+	"power": "ON",
+	"temperature": 24,
+	"mode": "COOL",
+	"fanSpeed": 2
 }
 ```
 
@@ -173,8 +186,8 @@
 | power | string | Không | `ON`, `OFF` | Bật/tắt AC |
 | mode | string | Không | `COOL`, `HEAT`, `DRY`, `FAN`, `AUTO` | Chế độ AC |
 | temperature | number | Không | `16-30` | Nhiệt độ (độ C) |
-| speed | number | Không | `1-5` | Tốc độ quạt AC |
-| swing | string | Không | `ON`, `OFF` | Bật/tắt lưng tượng |
+| speed hoặc fanSpeed | number | Không | `1-3` | Tốc độ quạt AC (tùy cấu hình, LG hỗ trợ 1-3) |
+| swing | string | Không | `ON`, `OFF` | Bật/tắt lưới tượng (tùy cấu hình, LG chỉ có ON) |
 
 ### Response (200 OK)
 
@@ -246,6 +259,51 @@
 
 - Mỗi category có tham số riêng, tham số không phù hợp sẽ bị bỏ qua
 - JWT token phải được gửi qua header `Authorization: Bearer <token>`
-- Nếu gửi nhiều tham số, firmware sẽ xử lý theo thứ tự: power → temperature → mode → speed → swing
+- Nếu gửi nhiều tham số, firmware sẽ xử lý theo thứ tự: power → temperature → mode → speed/fanSpeed → swing
 - Giữa mỗi lệnh IR có độ trễ 100ms để tránh xung đột
 - Hỗ trợ mở rộng AC brand bằng cách thêm hàm gửi IR và đăng ký vào `BrandIrSender` array
+- Số lượng speed levels và có/không có swing OFF phụ thuộc vào cấu hình `codeConfigs` của từng device
+- Có thể dùng `speed` hoặc `fanSpeed` (cả 2 đều được hỗ trợ)
+
+---
+
+## Cấu trúc IR Code Config
+
+Mỗi thiết bị AC cần có `internal.codeConfigs` trong device config:
+
+```json
+{
+	"internal": {
+		"peripheralType": "IR_SENDER",
+		"brand": "LG",
+		"codeConfigs": {
+			"power": { "ON": "0x8800F43", "OFF": "0x88C0051" },
+			"mode": { 
+				"COOL": "0x8808F4B",
+				"HEAT": "0x880C556",
+				"DRY": "0x880910A",
+				"FAN": "0x880A30D",
+				"AUTO": "0x880B151"
+			},
+			"speed": { 
+				"1": "0x880A30D",
+				"2": "0x880A32F",
+				"3": "0x880A341"
+			},
+			"temperature": { 
+				"16": "0x880A14F",
+				"17": "0x880A163",
+				...
+				"30": "0x880A267"
+			},
+			"swing": { "ON": "0x8810001" }
+		}
+	}
+}
+```
+
+**Lưu ý về cấu trúc IR codes:**
+- Mã IR phải là chuỗi hex bắt đầu với `0x`
+- Số bit (bits) mặc định là 28 cho LG, có thể thêm field `"bits": 28` vào `codeConfigs` nếu cần
+- Các hãng khác nhau có số bit khác nhau (LG: 28, Samsung: 36, Panasonic: 48)
+- Nếu thiếu một key (ví dụ không có `swing.OFF`), firmware sẽ báo lỗi khi cố gửi lệnh đó
