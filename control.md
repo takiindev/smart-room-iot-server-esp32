@@ -4,14 +4,13 @@
 
 ---
 
-<details>
-<summary><b>POST</b> <code>/control</code> - Điều khiển thiết bị theo <code>naturalId</code> và <code>category</code></summary>
+### **POST** `/control` - Điều khiển thiết bị theo `naturalId` và `category`
 
-> API này dùng để điều khiển các thiết bị đang được hỗ trợ trong firmware hiện tại. 
+> API này dùng để điều khiển các thiết bị đang được hỗ trợ trong firmware hiện tại.
 > 
-> Hiện tại chỉ hỗ trợ 2 nhóm: <code>LIGHT</code> và <code>FAN</code>.
+> Hiện tại hỗ trợ 3 loại: `LIGHT`, `FAN`, và `AIR_CONDITION`.
 > 
-> Request bắt buộc phải có JWT token hợp lệ trong header <code>Authorization</code>.
+> Request bắt buộc phải có JWT token hợp lệ trong header `Authorization`.
 
 ### Request Headers
 
@@ -21,26 +20,48 @@
 | Authorization | Bearer <token> | Có | JWT token lấy từ API đăng nhập |
 | Origin | string | Không | Nguồn gốc request (hỗ trợ CORS) |
 
-### Request Body
+### Request Body - Chung
 
 | Tên trường | Loại | Bắt buộc | Mô tả |
 | :--------- | :--- | :------- | :---- |
 | naturalId | string | Có | Định danh thiết bị cần điều khiển |
-| category | string | Có | Loại thiết bị. Hiện tại chỉ nhận <code>LIGHTING</code> hoặc <code>FAN</code> |
-| power | string | Không | Trạng thái điều khiển. Nếu có thì với <code>LIGHTING</code> nhận <code>ON</code> / <code>OFF</code>, với <code>FAN</code> nhận <code>ON</code> / <code>OFF</code> |
-| speed | number | Không | Chỉ dùng cho <code>FAN</code> khi cần chọn mức quạt. Giá trị hợp lệ: 1, 2, 3 |
+| category | string | Có | Loại thiết bị: `LIGHT`, `FAN`, `AIR_CONDITION` |
 
-### Request Example - LIGHTING
+---
+
+## LIGHT - Điều khiển đèn
+
+### Request Example
 
 ```json
 {
 	"naturalId": "LIGHT_01",
-	"category": "LIGHTING",
+	"category": "LIGHT",
 	"power": "ON"
 }
 ```
 
-### Request Example - FAN
+### Tham số LIGHT
+
+| Tên trường | Loại | Bắt buộc | Giá trị | Mô tả |
+| :--------- | :--- | :------- | :------ | :---- |
+| power | string | Không | `ON`, `OFF` | Bật/tắt đèn |
+
+### Response (200 OK)
+
+```json
+{
+	"status": 200,
+	"message": "Điều khiển thành công",
+	"timestamp": "2026-07-07T03:28:27Z"
+}
+```
+
+---
+
+## FAN - Điều khiển quạt
+
+### Request Example - Bằng tốc độ
 
 ```json
 {
@@ -50,13 +71,118 @@
 }
 ```
 
+### Request Example - Bằng trạng thái
+
+```json
+{
+	"naturalId": "Fan_01",
+	"category": "FAN",
+	"power": "ON"
+}
+```
+
+### Tham số FAN
+
+| Tên trường | Loại | Bắt buộc | Giá trị | Mô tả |
+| :--------- | :--- | :------- | :------ | :---- |
+| power | string | Không | `ON`, `OFF` | Bật/tắt quạt (bật tốc độ 1 nếu ON) |
+| speed | number | Không | `1`, `2`, `3` | Chọn mức quạt |
+
 ### Response (200 OK)
 
 ```json
 {
 	"status": 200,
 	"message": "Điều khiển thành công",
-	"timestamp": "2026-07-03T12:31:09Z"
+	"timestamp": "2026-07-07T03:28:27Z"
+}
+```
+
+---
+
+## AIR_CONDITION - Điều khiển điều hòa
+
+> Điều khiển AC thông qua gửi mã IR dựa trên cấu hình `internal.codeConfigs` trong device config.
+> 
+> Hỗ trợ các hãng: `LG`, `SAMSUNG`, `PANASONIC`. Có thể mở rộng bằng cách thêm hãng mới vào `BrandIrSender` registry.
+
+### Request Example - Bật AC
+
+```json
+{
+	"naturalId": "LABAC1",
+	"category": "AIR_CONDITION",
+	"power": "ON"
+}
+```
+
+### Request Example - Tắt AC
+
+```json
+{
+	"naturalId": "LABAC1",
+	"category": "AIR_CONDITION",
+	"power": "OFF"
+}
+```
+
+### Request Example - Đặt chế độ
+
+```json
+{
+	"naturalId": "LABAC1",
+	"category": "AIR_CONDITION",
+	"mode": "COOL"
+}
+```
+
+### Request Example - Đặt nhiệt độ
+
+```json
+{
+	"naturalId": "LABAC1",
+	"category": "AIR_CONDITION",
+	"temperature": 24
+}
+```
+
+### Request Example - Đặt tốc độ quạt
+
+```json
+{
+	"naturalId": "LABAC1",
+	"category": "AIR_CONDITION",
+	"speed": 3
+}
+```
+
+### Request Example - Bật/tắt swing
+
+```json
+{
+	"naturalId": "LABAC1",
+	"category": "AIR_CONDITION",
+	"swing": "ON"
+}
+```
+
+### Tham số AIR_CONDITION
+
+| Tên trường | Loại | Bắt buộc | Giá trị | Mô tả |
+| :--------- | :--- | :------- | :------ | :---- |
+| power | string | Không | `ON`, `OFF` | Bật/tắt AC |
+| mode | string | Không | `COOL`, `HEAT`, `DRY`, `FAN`, `AUTO` | Chế độ AC |
+| temperature | number | Không | `16-30` | Nhiệt độ (độ C) |
+| speed | number | Không | `1-5` | Tốc độ quạt AC |
+| swing | string | Không | `ON`, `OFF` | Bật/tắt lưng tượng |
+
+### Response (200 OK)
+
+```json
+{
+	"status": 200,
+	"message": "Điều khiển AC thành công",
+	"timestamp": "2026-07-07T03:28:27Z"
 }
 ```
 
@@ -66,78 +192,60 @@
 {
 	"status": 200,
 	"message": "Không có cấu hình nào được thay đổi",
-	"timestamp": "2026-07-03T12:31:09Z"
+	"timestamp": "2026-07-07T03:28:27Z"
 }
 ```
 
-### Response (400 Bad Request)
+---
 
-> Xảy ra khi body thiếu trường bắt buộc, định dạng dữ liệu sai, hoặc giá trị không hợp lệ.
+## Lỗi chung
+
+### Response (400 Bad Request)
 
 ```json
 {
 	"status": 400,
 	"message": "Body bắt buộc phải có các trường: naturalId, category",
-	"timestamp": "2026-07-03T12:31:09Z"
+	"timestamp": "2026-07-07T03:28:27Z"
 }
 ```
 
 ### Response (401 Unauthorized)
 
-> Xảy ra khi thiếu header Authorization, token không đúng định dạng, hoặc token không hợp lệ/hết hạn.
-
 ```json
 {
 	"status": 401,
 	"message": "Token hết hạn hoặc không đúng",
-	"timestamp": "2026-07-03T12:31:09Z"
+	"timestamp": "2026-07-07T03:28:27Z"
 }
 ```
 
 ### Response (404 Not Found)
 
-> Xảy ra khi `naturalId` không khớp với bất kỳ thiết bị nào trong cấu hình hiện tại.
-
 ```json
 {
 	"status": 404,
 	"message": "Không tìm thấy thiết bị có naturalId tương ứng",
-	"timestamp": "2026-07-03T12:31:09Z"
+	"timestamp": "2026-07-07T03:28:27Z"
 }
 ```
 
 ### Response (500 Internal Server Error)
 
-> Xảy ra khi firmware không parse được JSON cấu hình thiết bị.
-
 ```json
 {
 	"status": 500,
-	"message": "Lỗi thiết bị khi parse JSON",
-	"timestamp": "2026-07-03T12:31:09Z"
+	"message": "Lỗi đọc cấu hình AC",
+	"timestamp": "2026-07-07T03:28:27Z"
 }
 ```
 
-### Hỗ trợ theo category
+---
 
-#### LIGHTING
+## Ghi chú
 
-- `power` là tùy chọn, nếu gửi thì phải có giá trị `ON` hoặc `OFF`
-- Thiết bị được map theo `naturalId`
-- Firmware điều khiển relay ở chân GPIO đầu tiên của thiết bị
-
-#### FAN
-
-- `power` là tùy chọn, nếu gửi thì phải có giá trị `ON` hoặc `OFF`
-- `speed` là tùy chọn, nếu gửi thì chỉ nhận giá trị `1`, `2`, `3`
-- Firmware sẽ tắt toàn bộ chân quạt trước khi bật chân tương ứng với tốc độ hoặc mức GPIO tương ứng
-
-### Lưu ý
-
-- API này chỉ hỗ trợ đúng 2 category đang có trong firmware: `LIGHTING` và `FAN`
-- `naturalId` phải trùng với cấu hình thiết bị đã nạp trong firmware
+- Mỗi category có tham số riêng, tham số không phù hợp sẽ bị bỏ qua
 - JWT token phải được gửi qua header `Authorization: Bearer <token>`
-- Nếu body trống hoặc JSON không hợp lệ, server sẽ trả lỗi `400`
-- Nếu không gửi `power`, firmware sẽ chỉ dựa vào `naturalId`, `category`, và `speed` để xử lý theo luồng hiện có
-
-</details>
+- Nếu gửi nhiều tham số, firmware sẽ xử lý theo thứ tự: power → temperature → mode → speed → swing
+- Giữa mỗi lệnh IR có độ trễ 100ms để tránh xung đột
+- Hỗ trợ mở rộng AC brand bằng cách thêm hàm gửi IR và đăng ký vào `BrandIrSender` array

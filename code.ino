@@ -14,69 +14,8 @@ const char *PREF_NAMESPACE = "Configs";
 const char *JSON_KEY = "config_json";
 
 String config = R"rawliteral({
-  "roomCode": "R-VU",
-  "devices": [
-    {
-      "naturalId": "LABAC1",
-      "category": "AIR_CONDITION",
-      "controlType": "GPIO",
-      "specificType": "IR_SEND",
-      "gpioPin": [18],
-      "translations": {
-        "en": {
-          "name": "Lab AC 1"
-        },
-        "vi": {
-          "name": "Máy lạnh phòng lab 1"
-        }
-      },
-      "internal": {
-        "peripheralType": "IRSEND",
-        "brand": "LG",
-        "codeConfigs": {
-          "bits": 28,
-          "power": {
-            "ON": "0x20DF10EF",
-            "OFF": "0x20DF906F"
-          },
-          "mode": {
-            "COOL": "0x20DF40BF",
-            "HEAT": "0x20DFC03F",
-            "DRY": "0x20DF00FF",
-            "FAN": "0x20DF807F",
-            "AUTO": "0x20DFA05F"
-          },
-          "speed": {
-            "1": "0x20DF30CF",
-            "2": "0x20DFB04F",
-            "3": "0x20DF708F",
-            "4": "0x20DFF00F",
-            "5": "0x20DF50AF"
-          },
-          "temperature": {
-            "16": "0x20DF906F",
-            "17": "0x20DF10EF",
-            "18": "0x20DF50AF",
-            "19": "0x20DFF00F",
-            "20": "0x20DF708F",
-            "21": "0x20DFC03F",
-            "22": "0x20DF40BF",
-            "23": "0x20DFB04F",
-            "24": "0x20DF30CF",
-            "25": "0x20DFA05F",
-            "26": "0x20DFE01F",
-            "27": "0x20DF609F",
-            "28": "0x20DFA05F",
-            "29": "0x20DFC03F",
-            "30": "0x20DF40BF"
-          },
-          "swing": {
-            "ON": "0x20DFA05F",
-            "OFF": "0x20DFC03F"
-          }
-        }
-      }
-    },
+    "roomCode": "R-VU",
+    "devices": [
         {
             "naturalId": "LIGHT_01",
             "category": "LIGHT",
@@ -90,15 +29,10 @@ String config = R"rawliteral({
                     "description": "Light 01 of Lab A101"
                 }
             },
+            "peripheralType": "RELAY",
             "specificType": "GPIO",
             "controlType": "GPIO",
-            "gpioPin": [
-                13
-            ]
-            ,
-            "internal": {
-              "peripheralType": "RELAY"
-            }
+            "gpioPin": [13]
         },
         {
             "naturalId": "Fan_01",
@@ -113,16 +47,10 @@ String config = R"rawliteral({
                     "description": "Fan 01 of Lab A101"
                 }
             },
+            "peripheralType": "RELAY",
             "specificType": "GPIO",
             "controlType": "GPIO",
-            "gpioPin": [
-                14,
-                27,
-                26
-            ],
-            "internal": {
-              "peripheralType": "RELAY"
-            }
+            "gpioPin": [14, 27, 26]
         }
     ]
 })rawliteral";
@@ -141,18 +69,11 @@ IRsend irsend(kIrLedPin);
 char secret_key[] = "Vudeptrai@123";
 CustomJWT jwt(secret_key, 256);
 
-// const char *ssid = "A101CNTT";
-// const char *password = "fit@123456789";
-// IPAddress local_IP(172, 16, 64, 200);
-// IPAddress gateway(172, 16, 0, 1);
-// IPAddress subnet(255, 255, 0, 0);
-
-const char *ssid = "ThanhLoi";
-const char *password = "bichloi123";
-IPAddress local_IP(192, 168, 1, 200);
-IPAddress gateway(192, 168, 1, 1);
-IPAddress subnet(255, 255, 255, 0);
-
+const char *ssid = "A101CNTT";
+const char *password = "fit@123456789";
+IPAddress local_IP(172, 16, 64, 200);
+IPAddress gateway(172, 16, 0, 1);
+IPAddress subnet(255, 255, 0, 0);
 IPAddress primaryDNS(8, 8, 8, 8);
 IPAddress secondaryDNS(8, 8, 4, 4);
 
@@ -177,17 +98,13 @@ struct DeviceMatch
   int firstGpio = -1;
 };
 
-// Forward declaration of BrandIrSender
-struct BrandIrSender;
-
 void reinitializeRelayPins();
-bool turnOnAC(const String &naturalId = "");
-bool turnOffAC(const String &naturalId = "");
-bool toggleSwingAC(const String &naturalId = "");
-bool setSwingAC(const String &naturalId, String state);
-bool setModeAC(const String &naturalId, String mode);
-bool setFanSpeedAC(const String &naturalId, int speed);
-bool setTemperatureAC(const String &naturalId, int temp);
+void turnOnAC();
+void turnOffAC();
+void toggleSwingAC();
+void setModeAC(String mode);
+void setFanSpeedAC(int speed);
+void setTemperatureAC(int temp);
 float getTemperature();
 void controlRelay(int gpioPin, bool state);
 unsigned long getEpochTime();
@@ -202,7 +119,7 @@ void handleGetConfig();
 void handleUpdateConfig();
 void handleControl();
 void handleLogin();
-void handleDebugClearConfig();
+void handleACControl();
 
 String getCurrentTimestamp()
 {
@@ -210,7 +127,7 @@ String getCurrentTimestamp()
   time_t now;
   time(&now);
   gmtime_r(&now, &timeinfo);
-
+  
   char buffer[30];
   strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
   return String(buffer);
@@ -225,12 +142,12 @@ void sendJson(int statusCode, const String &message)
 
   String response;
   serializeJsonPretty(responseDoc, response);
-
+  
   // Log response to serial
   Serial.println("[API RESPONSE]");
   Serial.println(response);
   Serial.println("[END RESPONSE]");
-
+  
   server.send(statusCode, "application/json", response);
 }
 
@@ -244,12 +161,12 @@ void sendJsonWithData(int statusCode, const String &message, JsonDocument &data)
 
   String response;
   serializeJsonPretty(responseDoc, response);
-
+  
   // Log response to serial
   Serial.println("[API RESPONSE]");
   Serial.println(response);
   Serial.println("[END RESPONSE]");
-
+  
   server.send(statusCode, "application/json", response);
 }
 
@@ -279,7 +196,6 @@ void CheckConfigJSON()
   if (!preferences.isKey(JSON_KEY))
   {
     Serial.println("Không tìm thấy JSON cấu hình thiết bị trong bộ nhớ...");
-    Serial.println("Sử dụng cấu hình mặc định từ code.");
   }
   else
   {
@@ -304,340 +220,6 @@ String getRoomCodeFromConfigString(const String &configSource)
   }
 
   return "";
-}
-
-bool loadConfigDocument(JsonDocument &configDoc)
-{
-  return deserializeJson(configDoc, config) == DeserializationError::Ok;
-}
-
-bool findDeviceInConfig(const JsonDocument &configDoc, const String &naturalId, JsonObjectConst &deviceOut)
-{
-  JsonArrayConst devicesArray;
-  if (configDoc.containsKey("devices"))
-  {
-    devicesArray = configDoc["devices"].as<JsonArrayConst>();
-  }
-  else if (configDoc.is<JsonArrayConst>())
-  {
-    devicesArray = configDoc.as<JsonArrayConst>();
-  }
-  else
-  {
-    return false;
-  }
-
-  for (JsonObjectConst device : devicesArray)
-  {
-    if (device["naturalId"].as<String>() == naturalId)
-    {
-      deviceOut = device;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-bool readIrCodeValue(const JsonVariantConst &value, uint32_t &code)
-{
-  if (value.isNull())
-  {
-    return false;
-  }
-
-  if (value.is<const char *>())
-  {
-    const char *rawValue = value.as<const char *>();
-    if (rawValue == nullptr || rawValue[0] == '\0')
-    {
-      return false;
-    }
-
-    char *endPtr = nullptr;
-    unsigned long parsed = strtoul(rawValue, &endPtr, 0);
-    if (endPtr == rawValue || (endPtr != nullptr && *endPtr != '\0'))
-    {
-      return false;
-    }
-
-    code = static_cast<uint32_t>(parsed);
-    return true;
-  }
-
-  code = value.as<uint32_t>();
-  return code != 0;
-}
-
-struct BrandIrSender
-{
-  const char *brand;
-  bool (*send)(uint32_t code, uint16_t bits);
-};
-
-bool sendLgIrCode(uint32_t code, uint16_t bits)
-{
-  irsend.sendLG(code, bits);
-  return true;
-}
-
-bool sendSamsung36IrCode(uint32_t code, uint16_t bits)
-{
-  // Samsung uses 36-bit encoding, we send the code as 36 bits
-  irsend.sendSamsung36(code, 36);
-  return true;
-}
-
-bool sendPanasonicIrCode(uint32_t code, uint16_t bits)
-{
-  irsend.sendPanasonic(code, bits);
-  return true;
-}
-
-//map - Thêm hãng mới ở đây
-const BrandIrSender kBrandIrSenders[] = {
-    {"LG", sendLgIrCode},
-    {"SAMSUNG", sendSamsung36IrCode},
-    {"PANASONIC", sendPanasonicIrCode},
-};
-
-const BrandIrSender *findBrandIrSender(const String &brand)
-{
-  for (const BrandIrSender &entry : kBrandIrSenders)
-  {
-    if (brand.equalsIgnoreCase(entry.brand))
-    {
-      return &entry;
-    }
-  }
-
-  return nullptr;
-}
-
-String getDevicePeripheralTypeFromConfig(const JsonDocument &configDoc, const String &naturalId)
-{
-  if (!configDoc.containsKey("devices") || !configDoc["devices"].is<JsonArrayConst>())
-  {
-    return "";
-  }
-
-  JsonArrayConst devicesArray = configDoc["devices"].as<JsonArrayConst>();
-  for (JsonObjectConst device : devicesArray)
-  {
-    if (naturalId.length() > 0 && device["naturalId"].as<String>() != naturalId)
-    {
-      continue;
-    }
-
-    if (device.containsKey("internal") && device["internal"].is<JsonObjectConst>() && device["internal"].as<JsonObjectConst>().containsKey("peripheralType"))
-    {
-      String peripheralType = device["internal"]["peripheralType"].as<String>();
-      if (peripheralType.length() > 0)
-      {
-        return peripheralType;
-      }
-    }
-
-    if (device.containsKey("peripheralType"))
-    {
-      return device["peripheralType"].as<String>();
-    }
-  }
-
-  return "";
-}
-
-bool findAcCodeConfigsFromConfig(const JsonDocument &configDoc, const String &naturalId, JsonObjectConst &codeConfigsOut)
-{
-  if (!configDoc.containsKey("devices") || !configDoc["devices"].is<JsonArrayConst>())
-  {
-    return false;
-  }
-
-  JsonArrayConst devicesArray = configDoc["devices"].as<JsonArrayConst>();
-  for (JsonObjectConst device : devicesArray)
-  {
-    String category = device["category"].as<String>();
-    if (category != "AIR_CONDITION" && category != "AC")
-    {
-      continue;
-    }
-
-    String deviceNaturalId = device["naturalId"].as<String>();
-    if (naturalId.length() > 0 && deviceNaturalId != naturalId)
-    {
-      continue;
-    }
-
-    JsonObjectConst internal = device["internal"].as<JsonObjectConst>();
-    if (internal.isNull() || !internal.containsKey("codeConfigs") || !internal["codeConfigs"].is<JsonObjectConst>())
-    {
-      continue;
-    }
-
-    codeConfigsOut = internal["codeConfigs"].as<JsonObjectConst>();
-    if (!codeConfigsOut.isNull())
-    {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-String getAcBrandFromCodeConfigs(const JsonObjectConst &codeConfigs)
-{
-  if (codeConfigs.isNull())
-  {
-    return "LG";
-  }
-
-  return codeConfigs["brand"] | "LG";
-}
-
-uint16_t getAcBitsFromCodeConfigs(const JsonObjectConst &codeConfigs)
-{
-  if (codeConfigs.isNull())
-  {
-    return 28;
-  }
-
-  return codeConfigs["bits"] | 28;
-}
-
-bool getAcCommandCodeFromConfig(const JsonDocument &configDoc, const String &naturalId, const String &section, const String &key, uint32_t &code, uint16_t &bits, String &brand)
-{
-  // Find device from config
-  JsonArrayConst devicesArray;
-  if (configDoc.containsKey("devices"))
-  {
-    devicesArray = configDoc["devices"].as<JsonArrayConst>();
-  }
-  else if (configDoc.is<JsonArrayConst>())
-  {
-    devicesArray = configDoc.as<JsonArrayConst>();
-  }
-  else
-  {
-    Serial.println("Lỗi: Không tìm thấy devices trong config!");
-    return false;
-  }
-
-  JsonObjectConst targetDevice;
-  bool deviceFound = false;
-  for (JsonObjectConst device : devicesArray)
-  {
-    if (device["naturalId"].as<String>() == naturalId)
-    {
-      targetDevice = device;
-      deviceFound = true;
-      break;
-    }
-  }
-
-  if (!deviceFound || !targetDevice.containsKey("internal"))
-  {
-    Serial.printf("Lỗi: Không tìm thấy device '%s' hoặc thiếu field 'internal'\n", naturalId.c_str());
-    return false;
-  }
-
-  // Get internal object
-  JsonObjectConst internalObj = targetDevice["internal"].as<JsonObjectConst>();
-  // in ra nội dung của internalObj để debug
-  // String internalStr;
-  // serializeJson(internalObj, internalStr);
-  // Serial.printf("-> internalObj: %s\n", internalStr.c_str());
-  // Get and verify peripheralType
-  if (!internalObj.containsKey("peripheralType"))
-  {
-    Serial.printf("Lỗi: Device '%s' thiếu field 'internal.peripheralType'\n", naturalId.c_str());
-    return false;
-  }
-  
-  String peripheralType = internalObj["peripheralType"].as<String>();
-  if (peripheralType != "IR_SENDER")
-  {
-    Serial.printf("Lỗi: Device '%s' không phải IR_SENDER (là %s)\n", naturalId.c_str(), peripheralType.c_str());
-    return false;
-  }
-
-  // Get brand
-  if (!internalObj.containsKey("brand"))
-  {
-    brand = "LG"; // Default brand
-    Serial.printf("Cảnh báo: Device '%s' không có field 'brand', sử dụng mặc định LG\n", naturalId.c_str());
-  }
-  else
-  {
-    brand = internalObj["brand"].as<String>();
-  }
-
-
-  // Verify brand is supported
-  const BrandIrSender *sender = findBrandIrSender(brand);
-  if (sender == nullptr)
-  {
-    Serial.printf("Lỗi: Hãng AC '%s' chưa được đăng ký trong registry!\n", brand.c_str());
-    return false;
-  }
-
-  // Get codeConfigs from internal
-  if (!internalObj.containsKey("codeConfigs") || !internalObj["codeConfigs"].is<JsonObjectConst>())
-  {
-    Serial.printf("Lỗi: Device '%s' thiếu field 'internal.codeConfigs'\n", naturalId.c_str());
-    return false;
-  }
-
-  JsonObjectConst codeConfigs = internalObj["codeConfigs"].as<JsonObjectConst>();
-
-  // Get bits from codeConfigs (top level)
-  if (!codeConfigs.containsKey("bits"))
-  {
-    bits = 28; // Default bits
-    Serial.printf("Cảnh báo: codeConfigs không có field 'bits', sử dụng mặc định 28\n");
-  }
-  else
-  {
-    bits = codeConfigs["bits"].as<uint16_t>();
-  }
-
-  if (!codeConfigs.containsKey(section) || !codeConfigs[section].is<JsonObjectConst>())
-  {
-    Serial.printf("Lỗi: Thiếu section '%s' trong codeConfigs\n", section.c_str());
-    return false;
-  }
-
-  JsonObjectConst sectionObject = codeConfigs[section].as<JsonObjectConst>();
-  if (!sectionObject.containsKey(key))
-  {
-    Serial.printf("Lỗi: Thiếu key '%s' trong section '%s'\n", key.c_str(), section.c_str());
-    return false;
-  }
-
-  return readIrCodeValue(sectionObject[key], code);
-}
-
-bool sendAcCodeFromConfig(const JsonDocument &configDoc, const String &naturalId, const String &section, const String &key, const String &label)
-{
-  uint32_t code = 0;
-  uint16_t bits = 28;
-  String brand;
-
-  if (!getAcCommandCodeFromConfig(configDoc, naturalId, section, key, code, bits, brand))
-  {
-    Serial.printf("Lỗi: Thiếu mã config cho devices[%s].internal.codeConfigs.%s.%s\n", naturalId.c_str(), section.c_str(), key.c_str());
-    return false;
-  }
-
-  Serial.printf("[Thực thi] %s -> Hãng %s, mã 0x%07X, bits %u\n", label.c_str(), brand.c_str(), code, bits);
-  const BrandIrSender *sender = findBrandIrSender(brand);
-  if (sender == nullptr)
-  {
-    Serial.printf("Lỗi: Không có hàm gửi IR cho hãng '%s'!\n", brand.c_str());
-    return false;
-  }
-
-  return sender->send(code, bits);
 }
 
 void clearConfiguration()
@@ -711,8 +293,7 @@ void reinitializeRelayPins()
 
   for (JsonObject device : devicesArray)
   {
-    String peripheralType = getDevicePeripheralTypeFromConfig(doc, device["naturalId"].as<String>());
-    if (peripheralType != "RELAY")
+    if (device["peripheralType"].as<String>() != "RELAY")
     {
       continue;
     }
@@ -729,119 +310,102 @@ void reinitializeRelayPins()
   }
 }
 
-bool turnOnAC(const String &naturalId)
+void turnOnAC()
 {
-  JsonDocument configDoc;
-  if (!loadConfigDocument(configDoc))
-  {
-    Serial.println("Lỗi: Không đọc được cấu hình AC!");
-    return false;
-  }
-
-  return sendAcCodeFromConfig(configDoc, naturalId, "power", "ON", "turnOnAC()");
+  Serial.println("[Thực thi] turnOnAC() -> Đang phát mã 0x8800F43");
+  irsend.sendLG(0x8800F43, LG_BITS);
 }
 
-bool turnOffAC(const String &naturalId)
+void turnOffAC()
 {
-  JsonDocument configDoc;
-  if (!loadConfigDocument(configDoc))
-  {
-    Serial.println("Lỗi: Không đọc được cấu hình AC!");
-    return false;
-  }
-
-  return sendAcCodeFromConfig(configDoc, naturalId, "power", "OFF", "turnOffAC()");
+  Serial.println("[Thực thi] turnOffAC() -> Đang phát mã 0x88C0051");
+  irsend.sendLG(0x88C0051, LG_BITS);
 }
 
-bool toggleSwingAC(const String &naturalId)
+void toggleSwingAC()
 {
-  return setSwingAC(naturalId, "ON");
+  Serial.println("[Thực thi] toggleSwingAC() -> Đang phát mã 0x8810001");
+  irsend.sendLG(0x8810001, LG_BITS);
 }
 
-bool setSwingAC(const String &naturalId, String state)
+void setModeAC(String mode)
 {
-  JsonDocument configDoc;
-  if (!loadConfigDocument(configDoc))
+  uint32_t irCode = 0;
+  if (mode == "COOL")
   {
-    Serial.println("Lỗi: Không đọc được cấu hình AC!");
-    return false;
+    irCode = 0x8808F4B;
+    Serial.println("[Thực thi] setModeAC('C') -> Làm lạnh");
   }
-
-  if (state != "ON" && state != "OFF")
+  else if (mode == "HEAT")
   {
-    Serial.printf("Lỗi: Trạng thái swing '%s' không hợp lệ!\n", state.c_str());
-    return false;
+    irCode = 0x880C556;
+    Serial.println("[Thực thi] setModeAC('H') -> Làm ấm");
   }
-
-  return sendAcCodeFromConfig(configDoc, naturalId, "swing", state, "setSwingAC()");
-}
-
-bool setModeAC(const String &naturalId, String mode)
-{
-  JsonDocument configDoc;
-  if (!loadConfigDocument(configDoc))
+  else if (mode == "DRY")
   {
-    Serial.println("Lỗi: Không đọc được cấu hình AC!");
-    return false;
+    irCode = 0x880910A;
+    Serial.println("[Thực thi] setModeAC('D') -> Hút ẩm");
   }
-
-  if (!sendAcCodeFromConfig(configDoc, naturalId, "mode", mode, "setModeAC()"))
+  else if (mode == "AUTO")
+  {
+    irCode = 0x880B151;
+    Serial.println("[Thực thi] setModeAC('A') -> Tự động");
+  }
+  else if (mode == "FAN")
+  {
+    irCode = 0x880A30D;
+    Serial.println("[Thực thi] setModeAC('F') -> Chế độ quạt");
+  }
+  else
   {
     Serial.print("Lỗi: Tham số chế độ '");
     Serial.print(mode);
-    Serial.println("' không hợp lệ hoặc thiếu cấu hình!");
-    return false;
+    Serial.println("' không hợp lệ!");
+    return;
   }
-
-  return true;
+  irsend.sendLG(irCode, LG_BITS);
 }
 
-bool setFanSpeedAC(const String &naturalId, int speed)
+void setFanSpeedAC(int speed)
 {
-  if (speed < 1 || speed > 5)
+  uint32_t irCode = 0;
+  switch (speed)
   {
-    Serial.printf("Lỗi: Tốc độ %d không hợp lệ (Chỉ nhận 1 đến 5)!\n", speed);
-    return false;
+  case 1:
+    irCode = 0x880A30D;
+    Serial.println("[Thực thi] setFanSpeedAC(1) -> Quạt Yếu");
+    break;
+  case 2:
+    irCode = 0x880A32F;
+    Serial.println("[Thực thi] setFanSpeedAC(2) -> Quạt Vừa");
+    break;
+  case 3:
+    irCode = 0x880A341;
+    Serial.println("[Thực thi] setFanSpeedAC(3) -> Quạt Mạnh");
+    break;
+  default:
+    Serial.printf("Lỗi: Tốc độ %d không hợp lệ (Chỉ nhận 1, 2, 3)!\n", speed);
+    return;
   }
-
-  JsonDocument configDoc;
-  if (!loadConfigDocument(configDoc))
-  {
-    Serial.println("Lỗi: Không đọc được cấu hình AC!");
-    return false;
-  }
-
-  if (!sendAcCodeFromConfig(configDoc, naturalId, "speed", String(speed), "setFanSpeedAC()"))
-  {
-    Serial.printf("Lỗi: Thiếu cấu hình cho speed %d!\n", speed);
-    return false;
-  }
-
-  return true;
+  irsend.sendLG(irCode, LG_BITS);
 }
 
-bool setTemperatureAC(const String &naturalId, int temp)
+void setTemperatureAC(int temp)
 {
   if (temp < 16 || temp > 30)
   {
     Serial.printf("Lỗi: Nhiệt độ %d°C nằm ngoài dải an toàn (16-30°C)!\n", temp);
-    return false;
+    return;
   }
 
-  JsonDocument configDoc;
-  if (!loadConfigDocument(configDoc))
-  {
-    Serial.println("Lỗi: Không đọc được cấu hình AC!");
-    return false;
-  }
+  const uint32_t lgTempCodes[] = {
+      0x880A14F, 0x880A240, 0x880A341, 0x880A442, 0x880A543,
+      0x880A644, 0x880A745, 0x880A846, 0x880A947, 0x880AA48,
+      0x880AB49, 0x880AC4A, 0x880AD4B, 0x880AE4C, 0x880AF4D};
 
-  if (!sendAcCodeFromConfig(configDoc, naturalId, "temperature", String(temp), "setTemperatureAC()"))
-  {
-    Serial.printf("Lỗi: Thiếu cấu hình cho nhiệt độ %d!\n", temp);
-    return false;
-  }
-
-  return true;
+  uint32_t irCode = lgTempCodes[temp - 16];
+  Serial.printf("[Thực thi] setTemperatureAC(%d) -> Đang phát mã LG: 0x%07X\n", temp, irCode);
+  irsend.sendLG(irCode, LG_BITS);
 }
 
 float getTemperature()
@@ -990,7 +554,7 @@ DeviceMatch findLightingDevice(const String &naturalId)
     if (naturalId == device["naturalId"].as<String>())
     {
       match.found = true;
-      match.peripheralType = getDevicePeripheralTypeFromConfig(doc, naturalId);
+      match.peripheralType = device["peripheralType"].as<String>();
       match.firstGpio = device["gpioPin"][0].as<int>();
       break;
     }
@@ -1035,7 +599,6 @@ DeviceMatch findFanDevice(const String &naturalId)
     {
       match.found = true;
       match.gpioCount = device["gpioPin"].size();
-      match.peripheralType = getDevicePeripheralTypeFromConfig(doc, naturalId);
       for (int i = 0; i < match.gpioCount && i < 3; i++)
       {
         match.gpioPins[i] = device["gpioPin"][i].as<int>();
@@ -1087,11 +650,17 @@ void handleGetConfig()
 
   JsonDocument configDoc;
   deserializeJson(configDoc, config);
-
+  
   JsonDocument data;
   String roomCode = getRoomCodeFromConfigString(config);
-
-  if (configDoc.is<JsonArray>())
+  
+  // Extract roomCode if it exists in config
+  if (configDoc.containsKey("roomCode"))
+  {
+    data["roomCode"] = configDoc["roomCode"].as<String>();
+    data["devices"] = configDoc["devices"];
+  }
+  else if (configDoc.is<JsonArray>())
   {
     // Fallback for old format
     if (roomCode.length() > 0)
@@ -1102,9 +671,10 @@ void handleGetConfig()
   }
   else
   {
+    // Direct object format
     data = configDoc;
   }
-
+  
   sendJsonWithData(200, "Lấy JSON cấu hình thiết bị thành công", data);
   Serial.println("------------------------------------------");
 }
@@ -1129,14 +699,11 @@ void handleUpdateConfig()
     return;
   }
 
-  JsonDocument currentConfigDoc;
-  bool hasCurrentConfig = loadConfigDocument(currentConfigDoc);
-
   String newConfig;
-
+  
   // Log request details
   Serial.println("[CONFIG UPDATE REQUEST]");
-
+  
   // Check if request has the new format { roomCode, devices }
   if (jsonBody.containsKey("roomCode") && jsonBody.containsKey("devices"))
   {
@@ -1146,17 +713,10 @@ void handleUpdateConfig()
   }
   else if (jsonBody.containsKey("devices"))
   {
-    // Old format with just devices array - preserve existing roomCode when possible
+    // Old format with just devices array - wrap it with default roomCode
     Serial.println("[FORMAT] Legacy format (devices only)");
     JsonDocument wrappedConfig;
-    if (jsonBody.containsKey("roomCode") && !jsonBody["roomCode"].isNull())
-    {
-      wrappedConfig["roomCode"] = jsonBody["roomCode"].as<String>();
-    }
-    else if (hasCurrentConfig && currentConfigDoc.containsKey("roomCode"))
-    {
-      wrappedConfig["roomCode"] = currentConfigDoc["roomCode"].as<String>();
-    }
+    wrappedConfig["roomCode"] = jsonBody["roomCode"].isNull() ? "R-VU" : jsonBody["roomCode"].as<String>();
     wrappedConfig["devices"] = jsonBody["devices"];
     serializeJson(wrappedConfig, newConfig);
   }
@@ -1199,10 +759,10 @@ void handleControl()
 
   String naturalId = jsonBody["naturalId"].as<String>();
   String category = jsonBody["category"].as<String>();
-
+  
   // Log request details
   Serial.printf("[REQUEST] naturalId: %s, category: %s\n", naturalId.c_str(), category.c_str());
-
+  
   if (naturalId == "null" || naturalId.length() == 0 || category == "null" || category.length() == 0)
   {
     sendJson(400, "Body bắt buộc phải có các trường: naturalId, category");
@@ -1214,6 +774,7 @@ void handleControl()
   if (deserializeJson(configDoc, config))
   {
     sendJson(500, "Lỗi thiết bị khi parse JSON");
+  String roomCode = configDoc.containsKey("roomCode") ? configDoc["roomCode"].as<String>() : "";
     Serial.println("------------------------------------------");
     return;
   }
@@ -1224,7 +785,6 @@ void handleControl()
   {
     devicesArray = configDoc["devices"].as<JsonArray>();
   }
-  else if (configDoc.is<JsonArray>())
   {
     devicesArray = configDoc.as<JsonArray>();
   }
@@ -1266,7 +826,7 @@ void handleControl()
     }
 
     int targetGpio = targetDevice["gpioPin"][0].as<int>();
-    String peripheralType = getDevicePeripheralTypeFromConfig(configDoc, naturalId);
+    String peripheralType = targetDevice["peripheralType"].as<String>();
     String power = jsonBody["power"].as<String>();
 
     Serial.printf("[LIGHT CONTROL] GPIO: %d, Power: %s\n", targetGpio, power.c_str());
@@ -1293,151 +853,6 @@ void handleControl()
       sendJson(200, "Điều khiển thành công");
     }
 
-    Serial.println("------------------------------------------");
-    return;
-  }
-
-  if (category == "AIR_CONDITION")
-  {
-    bool actionExecuted = false;
-    bool actionFailed = false;
-
-    if (jsonBody.containsKey("power"))
-    {
-      String power = jsonBody["power"].as<String>();
-      if (power == "ON")
-      {
-        actionFailed = !turnOnAC(naturalId);
-        actionExecuted = true;
-      }
-      else if (power == "OFF")
-      {
-        actionFailed = !turnOffAC(naturalId);
-        actionExecuted = true;
-      }
-      else
-      {
-        sendJson(400, "power chỉ nhận giá trị là ON/OFF");
-        Serial.println("------------------------------------------");
-        return;
-      }
-    }
-
-    if (jsonBody.containsKey("temperature"))
-    {
-      if (actionFailed)
-      {
-        sendJson(500, "Lỗi đọc cấu hình AC");
-        Serial.println("------------------------------------------");
-        return;
-      }
-
-      if (actionExecuted)
-      {
-        delay(100);
-      }
-
-      int temperature = jsonBody["temperature"];
-      if (temperature < 16 || temperature > 30)
-      {
-        sendJson(400, "temperature chỉ nhận giá trị từ 16 đến 30");
-        Serial.println("------------------------------------------");
-        return;
-      }
-
-      actionFailed = !setTemperatureAC(naturalId, temperature);
-      actionExecuted = true;
-    }
-
-    if (jsonBody.containsKey("mode"))
-    {
-      if (actionFailed)
-      {
-        sendJson(500, "Lỗi đọc cấu hình AC");
-        Serial.println("------------------------------------------");
-        return;
-      }
-
-      if (actionExecuted)
-      {
-        delay(100);
-      }
-
-      String mode = jsonBody["mode"].as<String>();
-      if (mode != "COOL" && mode != "HEAT" && mode != "DRY" && mode != "AUTO" && mode != "FAN")
-      {
-        sendJson(400, "mode chỉ nhận giá trị COOL, HEAT, DRY, AUTO, FAN");
-        Serial.println("------------------------------------------");
-        return;
-      }
-
-      actionFailed = !setModeAC(naturalId, mode);
-      actionExecuted = true;
-    }
-
-    if (jsonBody.containsKey("speed") || jsonBody.containsKey("fanSpeed"))
-    {
-      if (actionFailed)
-      {
-        sendJson(500, "Lỗi đọc cấu hình AC");
-        Serial.println("------------------------------------------");
-        return;
-      }
-
-      if (actionExecuted)
-      {
-        delay(100);
-      }
-
-      int speed = jsonBody.containsKey("speed") ? jsonBody["speed"] : jsonBody["fanSpeed"];
-      if (speed < 1 || speed > 5)
-      {
-        sendJson(400, "speed chỉ nhận giá trị từ 1 đến 5");
-        Serial.println("------------------------------------------");
-        return;
-      }
-
-      actionFailed = !setFanSpeedAC(naturalId, speed);
-      actionExecuted = true;
-    }
-
-    if (jsonBody.containsKey("swing"))
-    {
-      if (actionFailed)
-      {
-        sendJson(500, "Lỗi đọc cấu hình AC");
-        Serial.println("------------------------------------------");
-        return;
-      }
-
-      if (actionExecuted)
-      {
-        delay(100);
-      }
-
-      String swing = jsonBody["swing"].as<String>();
-      if (swing != "ON" && swing != "OFF")
-      {
-        sendJson(400, "swing chỉ nhận giá trị ON/OFF");
-        Serial.println("------------------------------------------");
-        return;
-      }
-
-      actionFailed = !setSwingAC(naturalId, swing);
-      actionExecuted = true;
-    }
-
-    if (actionFailed)
-    {
-      sendJson(500, "Lỗi đọc cấu hình AC");
-      Serial.println("------------------------------------------");
-      return;
-    }
-
-    String message = actionExecuted ? "Điều khiển AC thành công" : "Không có cấu hình nào được thay đổi";
-    sendJson(200, message);
-
-    Serial.println("[Thành công] Phản hồi dữ liệu kết quả về Client hoàn tất.");
     Serial.println("------------------------------------------");
     return;
   }
@@ -1533,7 +948,7 @@ void handleControl()
     return;
   }
 
-  sendJson(400, "category chỉ nhận giá trị LIGHT | FAN | AIR_CONDITION");
+  sendJson(400, "category chỉ nhận giá trị LIGHT | FAN");
   Serial.println("------------------------------------------");
 }
 
@@ -1552,10 +967,10 @@ void handleLogin()
 
   String username = jsonBody["username"].as<String>();
   String passwordValue = jsonBody["password"].as<String>();
-
+  
   // Log login attempt
   Serial.printf("[LOGIN ATTEMPT] username: %s\n", username.c_str());
-
+  
   if (username.length() == 0 || username == "null" || passwordValue.length() == 0 || passwordValue == "null")
   {
     Serial.println("[LOGIN FAILED] Missing username or password");
@@ -1599,22 +1014,117 @@ void handleLogin()
 
   Serial.println("[LOGIN SUCCESS]");
   Serial.printf("[TOKEN] %s\n", finalToken.c_str());
-
+  
   JsonDocument data;
   data["token"] = finalToken;
   sendJsonWithData(200, "Đăng nhập thành công", data);
   Serial.println("------------------------------------------");
 }
 
-void handleDebugClearConfig()
+void handleACControl()
 {
   sendCORSHeaders();
   Serial.println("------------------------------------------");
-  Serial.println("Endpoint:/debug/clear-config");
-  
-  clearConfiguration();
-  
-  sendJson(200, "Đã xóa config từ preferences, sẽ sử dụng config mặc định");
+  Serial.println("Endpoint: /ac/control");
+
+  String token;
+  if (!requireBearerToken(token))
+  {
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonDocument jsonBody;
+  if (!parsePlainBody(jsonBody))
+  {
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  bool actionExecuted = false;
+
+  if (jsonBody.containsKey("power"))
+  {
+    String power = jsonBody["power"].as<String>();
+    if (power == "ON")
+    {
+      turnOnAC();
+      actionExecuted = true;
+    }
+    else if (power == "OFF")
+    {
+      turnOffAC();
+      actionExecuted = true;
+    }
+    else
+    {
+      sendJson(400, "power chỉ nhận giá trị là ON/OFF");
+      Serial.println("------------------------------------------");
+      return;
+    }
+  }
+
+  if (jsonBody.containsKey("temperature"))
+  {
+    if (actionExecuted)
+    {
+      delay(100);
+    }
+
+    int temperature = jsonBody["temperature"];
+    if (temperature < 16 || temperature > 30)
+    {
+      sendJson(400, "temperature chỉ nhận giá trị từ 16 đến 30");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    setTemperatureAC(temperature);
+    actionExecuted = true;
+  }
+
+  if (jsonBody.containsKey("mode"))
+  {
+    if (actionExecuted)
+    {
+      delay(100);
+    }
+
+    String mode = jsonBody["mode"].as<String>();
+    if (mode != "COOL" && mode != "HEAT" && mode != "DRY" && mode != "AUTO" && mode != "FAN")
+    {
+      sendJson(400, "mode chỉ nhận giá trị COOL, HEAT, DRY, AUTO, FAN");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    setModeAC(mode);
+    actionExecuted = true;
+  }
+
+  if (jsonBody.containsKey("fanSpeed"))
+  {
+    if (actionExecuted)
+    {
+      delay(100);
+    }
+
+    int fanSpeed = jsonBody["fanSpeed"];
+    if (fanSpeed < 1 || fanSpeed > 3)
+    {
+      sendJson(400, "fanSpeed chỉ nhận giá trị từ 1 đến 3");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    setFanSpeedAC(fanSpeed);
+    actionExecuted = true;
+  }
+
+  String message = actionExecuted ? "Điều khiển AC thành công" : "Không có cấu hình nào được thay đổi";
+  sendJson(200, message);
+
+  Serial.println("[Thành công] Phản hồi dữ liệu kết quả về Client hoàn tất.");
   Serial.println("------------------------------------------");
 }
 
@@ -1669,8 +1179,8 @@ void setup()
   if (retryCounter >= 2)
   {
     Serial.println("\n[LỖI BẢO MẬT] Không thể đồng bộ thời gian từ NTP!");
-    Serial.println("Để đảm bảo an toàn, hệ thống sẽ tự động khởi động lại sau 1 giây...");
-    delay(1000);
+    Serial.println("Để đảm bảo an toàn, hệ thống sẽ tự động khởi động lại sau 5 giây...");
+    delay(5000);
     ESP.restart();
   }
   else
@@ -1684,16 +1194,16 @@ void setup()
   server.on("/auth/login", HTTP_POST, handleLogin);
   server.on("/control", HTTP_POST, handleControl);
   server.on("/get/temperature", HTTP_POST, handleGetTemperature);
+  server.on("/ac/control", HTTP_POST, handleACControl);
   server.on("/config", HTTP_PATCH, handleUpdateConfig);
   server.on("/setup", HTTP_GET, handleGetConfig);
-  server.on("/debug/clear-config", HTTP_GET, handleDebugClearConfig);
 
   server.on("/auth/login", HTTP_OPTIONS, handleCORS);
   server.on("/control", HTTP_OPTIONS, handleCORS);
   server.on("/get/temperature", HTTP_OPTIONS, handleCORS);
+  server.on("/ac/control", HTTP_OPTIONS, handleCORS);
   server.on("/config", HTTP_OPTIONS, handleCORS);
   server.on("/setup", HTTP_OPTIONS, handleCORS);
-  server.on("/debug/clear-config", HTTP_OPTIONS, handleCORS);
 
   server.onNotFound(handleNotFound);
   server.begin();
