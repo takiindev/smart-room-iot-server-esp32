@@ -2,77 +2,103 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 #include <CustomJWT.h>
-#include "DHT.h"
 #include "time.h"
 #include <Arduino.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
 #include <Preferences.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 
 Preferences preferences;
 const char *PREF_NAMESPACE = "Configs";
 const char *JSON_KEY = "config_json";
 
 String config = R"rawliteral({
-  "roomCode": "R-VU",
-  "devices": [
-    {
-      "naturalId": "LABAC1",
-      "category": "AIR_CONDITION",
-      "controlType": "GPIO",
-      "specificType": "IR_SEND",
-      "gpioPin": [18],
-      "translations": {
-        "en": {
-          "name": "Lab AC 1"
+    "roomCode": "R-VU",
+    "devices": [
+        {
+            "naturalId": "TEMP_ESP32_01",
+            "category": "TEMPERATURE",
+            "specificType": "GPIO",
+            "controlType": "GPIO",
+            "gpioPin": [
+                4
+            ],
+            "translations": {
+                "vi": {
+                    "name": "Cảm biến nhiệt độ A101 1",
+                    "description": "Cảm biến nhiệt độ DS18B20 phòng học A101 sử dụng chuẩn giao tiếp 1-Wire"
+                },
+                "en": {
+                    "name": "Temperature Sensor A101 1",
+                    "description": "DS18B20 temperature sensor in room A101 using 1-Wire protocol"
+                }
+            },
+            "internal": {
+                "peripheralType": "SENSOR",
+                "module": "DS18B20"
+            }
         },
-        "vi": {
-          "name": "Máy lạnh phòng lab 1"
-        }
-      },
-      "internal": {
-        "peripheralType": "IR_SENDER",
-        "brand": "LG",
-        "codeConfigs": {
-          "power": {
-            "ON": "0x8800F43",
-            "OFF": "0x88C0051"
-          },
-          "mode": {
-            "COOL": "0x8808F4B",
-            "HEAT": "0x880C556",
-            "DRY": "0x880910A",
-            "FAN": "0x880A30D",
-            "AUTO": "0x880B151"
-          },
-          "speed": {
-            "1": "0x880A30D",
-            "2": "0x880A32F",
-            "3": "0x880A341"
-          },
-          "temperature": {
-            "16": "0x880A14F",
-            "17": "0x880A163",
-            "18": "0x880A177",
-            "19": "0x880A18B",
-            "20": "0x880A19F",
-            "21": "0x880A1B3",
-            "22": "0x880A1C7",
-            "23": "0x880A1DB",
-            "24": "0x880A1EF",
-            "25": "0x880A203",
-            "26": "0x880A217",
-            "27": "0x880A22B",
-            "28": "0x880A23F",
-            "29": "0x880A253",
-            "30": "0x880A267"
-          },
-          "swing": {
-            "ON": "0x8810001"
-          }
-        }
-      }
-    },
+        {
+            "naturalId": "LABAC1",
+            "category": "AIR_CONDITION",
+            "controlType": "GPIO",
+            "specificType": "IR_SEND",
+            "gpioPin": [
+                18
+            ],
+            "translations": {
+                "en": {
+                    "name": "Lab AC 1"
+                },
+                "vi": {
+                    "name": "Máy lạnh phòng lab 1"
+                }
+            },
+            "internal": {
+                "peripheralType": "IR_SENDER",
+                "brand": "LG",
+                "codeConfigs": {
+                    "power": {
+                        "ON": "0x8800F43",
+                        "OFF": "0x88C0051"
+                    },
+                    "mode": {
+                        "COOL": "0x8808F4B",
+                        "HEAT": "0x880C556",
+                        "DRY": "0x880910A",
+                        "FAN": "0x880A30D",
+                        "AUTO": "0x880B151"
+                    },
+                    "speed": {
+                        "1": "0x880A30D",
+                        "2": "0x880A32F",
+                        "3": "0x880A341"
+                    },
+                    "temperature": {
+                        "16": "0x880A14F",
+                        "17": "0x880A163",
+                        "18": "0x880A177",
+                        "19": "0x880A18B",
+                        "20": "0x880A19F",
+                        "21": "0x880A1B3",
+                        "22": "0x880A1C7",
+                        "23": "0x880A1DB",
+                        "24": "0x880A1EF",
+                        "25": "0x880A203",
+                        "26": "0x880A217",
+                        "27": "0x880A22B",
+                        "28": "0x880A23F",
+                        "29": "0x880A253",
+                        "30": "0x880A267"
+                    },
+                    "swing": {
+                        "ON": "0x8810001"
+                    }
+                }
+            }
+        },
         {
             "naturalId": "LIGHT_01",
             "category": "LIGHT",
@@ -90,10 +116,9 @@ String config = R"rawliteral({
             "controlType": "GPIO",
             "gpioPin": [
                 13
-            ]
-            ,
+            ],
             "internal": {
-              "peripheralType": "RELAY"
+                "peripheralType": "RELAY"
             }
         },
         {
@@ -113,35 +138,32 @@ String config = R"rawliteral({
             "controlType": "GPIO",
             "gpioPin": [
                 14,
-                27,
-                26
+                16,
+                17
             ],
             "internal": {
-              "peripheralType": "RELAY"
+                "peripheralType": "RELAY"
             }
         }
     ]
-})rawliteral";
+}
+)rawliteral";
 
 int activeRelayPins[13];
 int activeRelayCount = 0;
 
-#define DHTPIN 4
-#define DHTTYPE DHT22
-DHT dht(DHTPIN, DHTTYPE);
-
 const int ledPin = 2;
-const uint16_t kIrLedPin = 18;
-IRsend irsend(kIrLedPin);
+const uint8_t RELAY_INITIAL_STATE = LOW;  // Trạng thái ban đầu của relay: HIGH hoặc LOW
+IRsend *irsend = nullptr; // Pointer to IRsend object, initialized from config
 
 char secret_key[] = "Vudeptrai@123";
 CustomJWT jwt(secret_key, 256);
 
-const char *ssid = "A101CNTT";
-const char *password = "fit@123456789";
-IPAddress local_IP(172, 16, 64, 200);
-IPAddress gateway(172, 16, 0, 1);
-IPAddress subnet(255, 255, 0, 0);
+// const char *ssid = "A101CNTT";
+// const char *password = "fit@123456789";
+// IPAddress local_IP(172, 16, 64, 200);
+// IPAddress gateway(172, 16, 0, 1);
+// IPAddress subnet(255, 255, 0, 0);
 
 // const char *ssid = "ThanhLoi";
 // const char *password = "bichloi123";
@@ -149,6 +171,11 @@ IPAddress subnet(255, 255, 0, 0);
 // IPAddress gateway(192, 168, 1, 1);
 // IPAddress subnet(255, 255, 255, 0);
 
+const char *ssid = "The Shark Villa";
+const char *password = "249letrongtan";
+IPAddress local_IP(192, 168, 1, 200);
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 255, 252, 0);
 
 IPAddress primaryDNS(8, 8, 8, 8);
 IPAddress secondaryDNS(8, 8, 4, 4);
@@ -174,6 +201,18 @@ struct DeviceMatch
   int firstGpio = -1;
 };
 
+struct MotionSensorInfo
+{
+  bool found = false;
+  String naturalId;
+  String module;
+  int gpioPin = -1;
+  bool lastState = false;
+};
+
+// Global motion sensor info
+MotionSensorInfo motionSensor;
+
 // Forward declaration of BrandIrSender
 struct BrandIrSender;
 
@@ -185,7 +224,6 @@ bool setSwingAC(const String &naturalId, String state);
 bool setModeAC(const String &naturalId, String mode);
 bool setFanSpeedAC(const String &naturalId, int speed);
 bool setTemperatureAC(const String &naturalId, int temp);
-float getTemperature();
 void controlRelay(int gpioPin, bool state);
 unsigned long getEpochTime();
 bool validateJWT(String tokenStr);
@@ -193,12 +231,13 @@ bool requireBearerToken(String &token);
 bool parsePlainBody(JsonDocument &bodyDoc);
 DeviceMatch findLightingDevice(const String &naturalId);
 DeviceMatch findFanDevice(const String &naturalId);
+float readDS18B20Temperature(int gpioPin);
 void handleNotFound();
-void handleGetTemperature();
 void handleGetConfig();
 void handleUpdateConfig();
 void handleControl();
 void handleLogin();
+void handleGetTemperature();
 void handleDebugClearConfig();
 
 String getCurrentTimestamp()
@@ -374,24 +413,39 @@ struct BrandIrSender
 
 bool sendLgIrCode(uint32_t code, uint16_t bits)
 {
-  irsend.sendLG(code, bits);
+  if (irsend == nullptr)
+  {
+    Serial.println("Lỗi: IRsend object chưa được khởi tạo!");
+    return false;
+  }
+  irsend->sendLG(code, bits);
   return true;
 }
 
 bool sendSamsung36IrCode(uint32_t code, uint16_t bits)
 {
+  if (irsend == nullptr)
+  {
+    Serial.println("Lỗi: IRsend object chưa được khởi tạo!");
+    return false;
+  }
   // Samsung uses 36-bit encoding, we send the code as 36 bits
-  irsend.sendSamsung36(code, 36);
+  irsend->sendSamsung36(code, 36);
   return true;
 }
 
 bool sendPanasonicIrCode(uint32_t code, uint16_t bits)
 {
-  irsend.sendPanasonic(code, bits);
+  if (irsend == nullptr)
+  {
+    Serial.println("Lỗi: IRsend object chưa được khởi tạo!");
+    return false;
+  }
+  irsend->sendPanasonic(code, bits);
   return true;
 }
 
-//map - Thêm hãng mới ở đây
+// map - Thêm hãng mới ở đây
 const BrandIrSender kBrandIrSenders[] = {
     {"LG", sendLgIrCode},
     {"SAMSUNG", sendSamsung36IrCode},
@@ -550,7 +604,7 @@ bool getAcCommandCodeFromConfig(const JsonDocument &configDoc, const String &nat
     Serial.printf("Lỗi: Device '%s' thiếu field 'internal.peripheralType'\n", naturalId.c_str());
     return false;
   }
-  
+
   String peripheralType = internalObj["peripheralType"].as<String>();
   if (peripheralType != "IR_SENDER")
   {
@@ -568,7 +622,6 @@ bool getAcCommandCodeFromConfig(const JsonDocument &configDoc, const String &nat
   {
     brand = internalObj["brand"].as<String>();
   }
-
 
   // Verify brand is supported
   const BrandIrSender *sender = findBrandIrSender(brand);
@@ -677,8 +730,8 @@ void reinitializeRelayPins()
 {
   for (int i = 0; i < activeRelayCount; i++)
   {
-    digitalWrite(activeRelayPins[i], LOW);
-    Serial.printf("Reset RELAY cũ GPIO %d\n", activeRelayPins[i]);
+    digitalWrite(activeRelayPins[i], RELAY_INITIAL_STATE);
+    Serial.printf("Reset RELAY cũ GPIO %d -> %s\n", activeRelayPins[i], RELAY_INITIAL_STATE ? "HIGH" : "LOW");
   }
   activeRelayCount = 0;
 
@@ -719,9 +772,9 @@ void reinitializeRelayPins()
     {
       int gpioPin = pinValue.as<int>();
       pinMode(gpioPin, OUTPUT);
-      digitalWrite(gpioPin, LOW);
+      digitalWrite(gpioPin, RELAY_INITIAL_STATE);
       activeRelayPins[activeRelayCount++] = gpioPin;
-      Serial.printf("Re-init RELAY mới GPIO %d\n", gpioPin);
+      Serial.printf("Re-init RELAY mới GPIO %d -> %s\n", gpioPin, RELAY_INITIAL_STATE ? "HIGH" : "LOW");
     }
   }
 }
@@ -841,16 +894,31 @@ bool setTemperatureAC(const String &naturalId, int temp)
   return true;
 }
 
-float getTemperature()
-{
-  return dht.readTemperature();
-}
-
 void controlRelay(int gpioPin, bool state)
 {
   Serial.printf("[GPIO WRITE] Pin %d <- %d (%s)\n", gpioPin, state ? HIGH : LOW, state ? "HIGH" : "LOW");
   digitalWrite(gpioPin, state ? HIGH : LOW);
   Serial.printf("[GPIO READ] Pin %d = %d\n", gpioPin, digitalRead(gpioPin));
+}
+
+float readDS18B20Temperature(int gpioPin)
+{
+  OneWire oneWire(gpioPin);
+  DallasTemperature sensors(&oneWire);
+
+  sensors.begin();
+  sensors.requestTemperatures();
+
+  float temp = sensors.getTempCByIndex(0);
+
+  if (temp == DEVICE_DISCONNECTED_C)
+  {
+    Serial.printf("Lỗi: Cảm biến DS18B20 trên GPIO %d không phản hồi!\n", gpioPin);
+    return -999.0;
+  }
+
+  Serial.printf("[DS18B20] GPIO %d -> Nhiệt độ: %.2f°C\n", gpioPin, temp);
+  return temp;
 }
 
 unsigned long getEpochTime()
@@ -1054,7 +1122,7 @@ void handleGetTemperature()
 {
   sendCORSHeaders();
   Serial.println("------------------------------------------");
-  Serial.println("Endpoint:/get/temperature");
+  Serial.println("Endpoint:/temperature");
 
   String token;
   if (!requireBearerToken(token))
@@ -1063,8 +1131,107 @@ void handleGetTemperature()
     return;
   }
 
+  JsonDocument jsonBody;
+  if (!parsePlainBody(jsonBody))
+  {
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  String naturalId = jsonBody["naturalId"].as<String>();
+
+  if (naturalId == "null" || naturalId.length() == 0)
+  {
+    sendJson(400, "Body bắt buộc phải có trường: naturalId");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  Serial.printf("[REQUEST] naturalId: %s\n", naturalId.c_str());
+
+  JsonDocument configDoc;
+  if (deserializeJson(configDoc, config))
+  {
+    sendJson(500, "Lỗi thiết bị khi parse JSON");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonArrayConst devicesArray;
+  if (configDoc.containsKey("devices"))
+  {
+    devicesArray = configDoc["devices"].as<JsonArrayConst>();
+  }
+  else
+  {
+    sendJson(500, "Lỗi thiết bị khi parse JSON");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonObjectConst targetDevice;
+  bool deviceFound = false;
+  for (JsonObjectConst device : devicesArray)
+  {
+    String category = device["category"].as<String>();
+    if (category != "TEMPERATURE")
+    {
+      continue;
+    }
+
+    if (device["naturalId"].as<String>() == naturalId)
+    {
+      targetDevice = device;
+      deviceFound = true;
+      Serial.printf("[DEVICE FOUND] naturalId: %s\n", naturalId.c_str());
+      break;
+    }
+  }
+
+  if (!deviceFound)
+  {
+    Serial.printf("[DEVICE NOT FOUND] naturalId: %s\n", naturalId.c_str());
+    sendJson(404, "Không tìm thấy cảm biến nhiệt độ có naturalId tương ứng");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  if (!targetDevice.containsKey("internal") || !targetDevice["internal"].containsKey("module"))
+  {
+    sendJson(500, "Lỗi: Cảm biến thiếu thông tin module");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  String module = targetDevice["internal"]["module"].as<String>();
+  if (module != "DS18B20")
+  {
+    Serial.printf("Lỗi: Module '%s' hiện chưa được hỗ trợ\n", module.c_str());
+    sendJson(501, "Module cảm biến chưa được hỗ trợ");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  if (!targetDevice["gpioPin"].is<JsonArrayConst>() || targetDevice["gpioPin"].size() == 0)
+  {
+    sendJson(500, "Lỗi: Cảm biến thiếu thông tin GPIO pin");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  int gpioPin = targetDevice["gpioPin"][0].as<int>();
+  float temperature = readDS18B20Temperature(gpioPin);
+
+  if (temperature == -999.0)
+  {
+    sendJson(500, "Lỗi: Không thể đọc dữ liệu từ cảm biến");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
   JsonDocument data;
-  data["temperature"] = getTemperature();
+  data["tempC"] = serialized(String(temperature, 3));
+
   sendJsonWithData(200, "Lấy nhiệt độ thành công", data);
   Serial.println("------------------------------------------");
 }
@@ -1608,9 +1775,9 @@ void handleDebugClearConfig()
   sendCORSHeaders();
   Serial.println("------------------------------------------");
   Serial.println("Endpoint:/debug/clear-config");
-  
+
   clearConfiguration();
-  
+
   sendJson(200, "Đã xóa config từ preferences, sẽ sử dụng config mặc định");
   Serial.println("------------------------------------------");
 }
@@ -1680,23 +1847,51 @@ void setup()
 
   server.on("/auth/login", HTTP_POST, handleLogin);
   server.on("/control", HTTP_POST, handleControl);
-  server.on("/get/temperature", HTTP_POST, handleGetTemperature);
+  server.on("/temperature", HTTP_POST, handleGetTemperature);
   server.on("/config", HTTP_PATCH, handleUpdateConfig);
   server.on("/setup", HTTP_GET, handleGetConfig);
   server.on("/debug/clear-config", HTTP_GET, handleDebugClearConfig);
 
   server.on("/auth/login", HTTP_OPTIONS, handleCORS);
   server.on("/control", HTTP_OPTIONS, handleCORS);
-  server.on("/get/temperature", HTTP_OPTIONS, handleCORS);
+  server.on("/temperature", HTTP_OPTIONS, handleCORS);
   server.on("/config", HTTP_OPTIONS, handleCORS);
   server.on("/setup", HTTP_OPTIONS, handleCORS);
   server.on("/debug/clear-config", HTTP_OPTIONS, handleCORS);
 
   server.onNotFound(handleNotFound);
   server.begin();
-  irsend.begin();
+
+  // Initialize IRsend from config
+  JsonDocument configDoc;
+  if (deserializeJson(configDoc, config) == DeserializationError::Ok)
+  {
+    JsonArrayConst devicesArray = configDoc["devices"].as<JsonArrayConst>();
+    int irLedPin = 18; // Default fallback
+
+    for (JsonObjectConst device : devicesArray)
+    {
+      String category = device["category"].as<String>();
+      if (category == "AIR_CONDITION" && device.containsKey("gpioPin"))
+      {
+        irLedPin = device["gpioPin"][0].as<int>();
+        Serial.printf("IR LED pin từ config: %d\n", irLedPin);
+        break;
+      }
+    }
+
+    irsend = new IRsend(irLedPin);
+    irsend->begin();
+    Serial.printf("IRsend đã khởi tạo với GPIO pin %d\n", irLedPin);
+  }
+  else
+  {
+    Serial.println("Cảnh báo: Không đọc được config, sử dụng IR LED pin mặc định 18");
+    irsend = new IRsend(18);
+    irsend->begin();
+  }
+
   digitalWrite(ledPin, HIGH);
-  dht.begin();
 
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, config);
