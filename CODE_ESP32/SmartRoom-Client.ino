@@ -6,17 +6,70 @@
 #include <Arduino.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
-#include <Preferences.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <HTTPClient.h>
+#include <Wire.h>
+#include <SensirionI2cScd4x.h>
+#include <SensirionCore.h>
 
-Preferences preferences;
-const char *PREF_NAMESPACE = "Configs";
-const char *JSON_KEY = "config_json";
+// Không dùng Preferences nữa - config chỉ lưu trong RAM
 
-String config = R"rawliteral({
+String config = R"rawliteral(
+{
+    "timeApi": "http://172.16.65.109:1234g/time",
     "roomCode": "R-VU",
+    "I2C": {
+        "SDA": 21,
+        "SCL": 22
+    },
     "devices": [
+         {
+            "naturalId": "HUM_ESP32_01",
+            "category": "HUMIDITY",
+            "specificType": "GPIO",
+            "controlType": "GPIO",
+            "gpioPin": [
+                21,22
+            ],
+            "translations": {
+                "vi": {
+                    "name": "Cảm biến độ ẩm A101 1",
+                    "description": "Cảm biến độ ẩm SHT40 phòng học A101 sử dụng chuẩn giao tiếp 1-Wire"
+                },
+                "en": {
+                    "name": "Humidity Sensor A101 1",
+                    "description": "SHT40 humidity sensor in room A101 using 1-Wire protocol"
+                }
+            },
+            "internal": {
+                "peripheralType": "SENSOR",
+                "module": "SCD40"
+            }
+        },
+        {
+            "naturalId": "TEMP_ESP32_02",
+            "category": "TEMPERATURE",
+            "specificType": "GPIO",
+            "controlType": "GPIO",
+            "gpioPin": [
+                21,22
+            ],
+            "translations": {
+                "vi": {
+                    "name": "Cảm biến nhiệt độ A101 2",
+                    "description": "Cảm biến nhiệt độ SHT40 phòng học A101 sử dụng chuẩn giao tiếp I2C"
+                },
+                "en": {
+                    "name": "Temperature Sensor A101 2",
+                    "description": "SHT40 temperature sensor in room A101 using I2C protocol"
+                }
+            },
+            "internal": {
+                "peripheralType": "SENSOR",
+                "module": "SCD40"
+            }
+        },
         {
             "naturalId": "TEMP_ESP32_01",
             "category": "TEMPERATURE",
@@ -38,6 +91,67 @@ String config = R"rawliteral({
             "internal": {
                 "peripheralType": "SENSOR",
                 "module": "DS18B20"
+            }
+        },
+        {
+            "naturalId": "ESP_AC2_0022",
+            "category": "AIR_CONDITION",
+            "controlType": "GPIO",
+            "specificType": "IR_SEND",
+            "gpioPin": [
+                18
+            ],
+            "translations": {
+                "vi": {
+                    "name": "Máy lạnh COOLIX"
+                },
+                "en": {
+                    "name": "COOLIX Air Conditioner"
+                }
+            },
+            "internal": {
+                "peripheralType": "IR_SENDER",
+                "brand": "COOLIX",
+                "codeConfigs": {
+                    "bits": 24,
+                    "power": {
+                        "ON": "0xB2BF30",
+                        "OFF": "0xB27BE0"
+                    },
+                    "mode": {
+                        "COOL": "0xB2BF30",
+                        "HEAT": "0xB2BF2C",
+                        "AUTO": "0xB21F48",
+                        "FAN": "0xB2BFE4",
+                        "DRY": "0xB21F54"
+                    },
+                    "speed": {
+                        "1": "0xB29FB0",
+                        "2": "0xB25FB0",
+                        "3": "0xB23FB0"
+                    },
+                    "temperature": {
+                        "16": "0xB2BF00",
+                        "17": "0xB2BF00",
+                        "18": "0xB2BF10",
+                        "19": "0xB2BF30",
+                        "20": "0xB2BF20",
+                        "21": "0xB2BF60",
+                        "22": "0xB2BF70",
+                        "23": "0xB2BF50",
+                        "24": "0xB2BF40",
+                        "25": "0xB20BFC",
+                        "26": "0xB2BFD0",
+                        "27": "0xB2BF90",
+                        "28": "0xB2BF80",
+                        "29": "0xB2BFA0",
+                        "30": "0xB2BFB0"
+                    },
+                    "swing": {
+                        "ON": "0xB26BE0",
+                        "OFF": "0xB20FE0"
+                    }
+                }
             }
         },
         {
@@ -138,8 +252,8 @@ String config = R"rawliteral({
             "controlType": "GPIO",
             "gpioPin": [
                 14,
-                16,
-                17
+                18,
+                19
             ],
             "internal": {
                 "peripheralType": "RELAY"
@@ -153,17 +267,21 @@ int activeRelayPins[13];
 int activeRelayCount = 0;
 
 const int ledPin = 2;
-const uint8_t RELAY_INITIAL_STATE = LOW;  // Trạng thái ban đầu của relay: HIGH hoặc LOW
-IRsend *irsend = nullptr; // Pointer to IRsend object, initialized from config
+const uint8_t RELAY_INITIAL_STATE = HIGH; // Trạng thái ban đầu của relay: HIGH hoặc LOW
+IRsend *irsend = nullptr;                 // Pointer to IRsend object, initialized from config
+
+// SCD40 sensor - global object, initialized once
+SensirionI2cScd4x scd4x;
+bool isScd40Initialized = false;
 
 char secret_key[] = "Vudeptrai@123";
 CustomJWT jwt(secret_key, 256);
 
-// const char *ssid = "A101CNTT";
-// const char *password = "fit@123456789";
-// IPAddress local_IP(172, 16, 64, 200);
-// IPAddress gateway(172, 16, 0, 1);
-// IPAddress subnet(255, 255, 0, 0);
+const char *ssid = "A101CNTT";
+const char *password = "fit@123456789";
+IPAddress local_IP(172, 16, 65, 254);
+IPAddress gateway(172, 16, 0, 1);
+IPAddress subnet(255, 255, 0, 0);
 
 // const char *ssid = "ThanhLoi";
 // const char *password = "bichloi123";
@@ -171,11 +289,11 @@ CustomJWT jwt(secret_key, 256);
 // IPAddress gateway(192, 168, 1, 1);
 // IPAddress subnet(255, 255, 255, 0);
 
-const char *ssid = "The Shark Villa";
-const char *password = "249letrongtan";
-IPAddress local_IP(192, 168, 1, 200);
-IPAddress gateway(192, 168, 1, 1);
-IPAddress subnet(255, 255, 252, 0);
+// const char *ssid = "The Shark Villa";
+// const char *password = "249letrongtan";
+// IPAddress local_IP(192, 168, 1, 200);
+// IPAddress gateway(192, 168, 1, 1);
+// IPAddress subnet(255, 255, 252, 0);
 
 IPAddress primaryDNS(8, 8, 8, 8);
 IPAddress secondaryDNS(8, 8, 4, 4);
@@ -232,13 +350,111 @@ bool parsePlainBody(JsonDocument &bodyDoc);
 DeviceMatch findLightingDevice(const String &naturalId);
 DeviceMatch findFanDevice(const String &naturalId);
 float readDS18B20Temperature(int gpioPin);
+bool readSCD40Data(int sdaPin, int sclPin, float &temperature, float &humidity);
+bool syncTimeFromApi(const String &timeApiUrl);
 void handleNotFound();
 void handleGetConfig();
-void handleUpdateConfig();
 void handleControl();
 void handleLogin();
 void handleGetTemperature();
-void handleDebugClearConfig();
+void handleGetHumidity();
+void handleTelemetry();
+void initAllSensors();
+
+bool syncTimeFromApi(const String &timeApiUrl)
+{
+  if (timeApiUrl.length() == 0 || timeApiUrl == "null")
+  {
+    Serial.println("[TIME SYNC] timeApiUrl rỗng, bỏ qua sync time từ API");
+    return false;
+  }
+
+  Serial.printf("[TIME SYNC] Đang đồng bộ thời gian từ API: %s\n", timeApiUrl.c_str());
+
+  HTTPClient http;
+  unsigned long requestTime = millis();
+
+  http.begin(timeApiUrl);
+  http.setConnectTimeout(5000);
+  http.setTimeout(5000);
+
+  int httpCode = http.GET();
+
+  unsigned long responseTime = millis();
+  unsigned long latency = (responseTime - requestTime) / 2; // Chia đôi (request + response)
+
+  if (httpCode != HTTP_CODE_OK)
+  {
+    Serial.printf("[TIME SYNC FAILED] HTTP Code: %d\n", httpCode);
+    http.end();
+    return false;
+  }
+
+  String payload = http.getString();
+  http.end();
+
+  JsonDocument doc;
+  if (deserializeJson(doc, payload))
+  {
+    Serial.println("[TIME SYNC FAILED] JSON Parse Error");
+    return false;
+  }
+
+  // Check for new format: { "data": { "time": "..." } }
+  String timeStr;
+  if (doc.containsKey("data") && doc["data"].containsKey("time"))
+  {
+    timeStr = doc["data"]["time"].as<String>();
+    Serial.println("[TIME SYNC] Format: { data: { time: ... } }");
+  }
+  // Fallback to old format: { "time": "..." }
+  else if (doc.containsKey("time"))
+  {
+    timeStr = doc["time"].as<String>();
+    Serial.println("[TIME SYNC] Format: { time: ... }");
+  }
+  else
+  {
+    Serial.println("[TIME SYNC FAILED] Response không có field 'time' hoặc 'data.time'");
+    return false;
+  }
+
+  Serial.printf("[TIME SYNC] Response time: %s\n", timeStr.c_str());
+  Serial.printf("[TIME SYNC] Latency: %lu ms\n", latency);
+
+  // Parse ISO 8601 time string: 2026-07-11T08:01:32.116Z
+  struct tm timeinfo = {};
+  char buf[30];
+  timeStr.toCharArray(buf, 30);
+
+  // Parse year, month, day, hour, minute, second
+  sscanf(buf, "%d-%d-%dT%d:%d:%d",
+         &timeinfo.tm_year, &timeinfo.tm_mon, &timeinfo.tm_mday,
+         &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec);
+
+  timeinfo.tm_year -= 1900; // Years since 1900
+  timeinfo.tm_mon -= 1;     // Months since January (0-11)
+
+  time_t serverTime = mktime(&timeinfo);
+  if (serverTime == -1)
+  {
+    Serial.println("[TIME SYNC FAILED] mktime() failed");
+    return false;
+  }
+
+  // Thêm latency compensation vào thời gian
+  time_t adjustedTime = serverTime + (latency / 1000);
+
+  // Set system time
+  timeval tv = {adjustedTime, 0};
+  settimeofday(&tv, nullptr);
+
+  Serial.printf("[TIME SYNC SUCCESS] Đã sync thời gian thành công\n");
+  Serial.printf("[TIME SYNC] Original time: %lu\n", serverTime);
+  Serial.printf("[TIME SYNC] Adjusted time: %lu\n", adjustedTime);
+
+  return true;
+}
 
 String getCurrentTimestamp()
 {
@@ -311,19 +527,8 @@ void handleCORS()
 
 void CheckConfigJSON()
 {
-  preferences.begin(PREF_NAMESPACE, true);
-  if (!preferences.isKey(JSON_KEY))
-  {
-    Serial.println("Không tìm thấy JSON cấu hình thiết bị trong bộ nhớ...");
-    Serial.println("Sử dụng cấu hình mặc định từ code.");
-  }
-  else
-  {
-    config = preferences.getString(JSON_KEY, "{}");
-    Serial.println("Đã tải JSON cấu hình từ bộ nhớ!");
-    Serial.printf("Kích thước: %d bytes\n", config.length());
-  }
-  preferences.end();
+  // Không dùng Preferences nữa, chỉ dùng config mặc định hard-code
+  Serial.println("Sử dụng cấu hình mặc định từ code.");
 }
 
 String getRoomCodeFromConfigString(const String &configSource)
@@ -690,42 +895,6 @@ bool sendAcCodeFromConfig(const JsonDocument &configDoc, const String &naturalId
   return sender->send(code, bits);
 }
 
-void clearConfiguration()
-{
-  preferences.begin(PREF_NAMESPACE, false);
-  preferences.remove(JSON_KEY);
-  Serial.println("-> Đã xóa dữ liệu cấu hình trong bộ nhớ!");
-  preferences.end();
-}
-
-int UpdateConfigJSON(String newConfig)
-{
-  if (newConfig.length() == 0 || newConfig == "null")
-  {
-    Serial.println("-> Lỗi: newConfig rỗng hoặc không hợp lệ!");
-    return 0;
-  }
-
-  preferences.begin(PREF_NAMESPACE, false);
-  delay(10);
-
-  size_t sch = preferences.putString(JSON_KEY, newConfig);
-  if (sch > 0)
-  {
-    Serial.println("-> Đã lưu cấu hình mới vào bộ nhớ thành công!");
-    config = newConfig;
-    Serial.printf("   Kích thước: %d bytes\n", sch);
-    reinitializeRelayPins();
-  }
-  else
-  {
-    Serial.println("-> Lỗi: Không thể lưu vào bộ nhớ!");
-  }
-
-  preferences.end();
-  return sch;
-}
-
 void reinitializeRelayPins()
 {
   for (int i = 0; i < activeRelayCount; i++)
@@ -896,8 +1065,8 @@ bool setTemperatureAC(const String &naturalId, int temp)
 
 void controlRelay(int gpioPin, bool state)
 {
-  Serial.printf("[GPIO WRITE] Pin %d <- %d (%s)\n", gpioPin, state ? HIGH : LOW, state ? "HIGH" : "LOW");
-  digitalWrite(gpioPin, state ? HIGH : LOW);
+  Serial.printf("[GPIO WRITE] Pin %d <- %d (%s)\n", gpioPin, state ? LOW : HIGH, state ? "LOW" : "HIGH");
+  digitalWrite(gpioPin, state ? LOW : HIGH);
   Serial.printf("[GPIO READ] Pin %d = %d\n", gpioPin, digitalRead(gpioPin));
 }
 
@@ -919,6 +1088,113 @@ float readDS18B20Temperature(int gpioPin)
 
   Serial.printf("[DS18B20] GPIO %d -> Nhiệt độ: %.2f°C\n", gpioPin, temp);
   return temp;
+}
+
+void printSCD40Error(uint16_t error)
+{
+  char errorMessage[256];
+  errorToString(error, errorMessage, sizeof(errorMessage));
+  Serial.println(errorMessage);
+}
+
+bool readSCD40Data(int sdaPin, int sclPin, float &temperature, float &humidity)
+{
+  // Chỉ khởi tạo I2C và cảm biến một lần duy nhất trong suốt vòng đời chip
+  if (!isScd40Initialized)
+  {
+    Wire.begin(sdaPin, sclPin);
+    
+    scd4x.begin(Wire, 0x62); // SCD40 I2C address: 0x62
+
+    uint16_t error;
+
+    // Stop any previous measurements
+    error = scd4x.stopPeriodicMeasurement();
+    if (error)
+    {
+      Serial.print("[SCD40] Stop measurement error: ");
+      printSCD40Error(error);
+      return false;
+    }
+
+    // Get serial number to verify sensor is present
+    uint64_t serialNumber;
+    error = scd4x.getSerialNumber(serialNumber);
+    if (error)
+    {
+      Serial.print("[SCD40] Sensor not found: ");
+      printSCD40Error(error);
+      return false;
+    }
+
+    Serial.print("[SCD40] Serial Number: 0x");
+    Serial.println((unsigned long long)serialNumber, HEX);
+
+    // Start periodic measurement
+    error = scd4x.startPeriodicMeasurement();
+    if (error)
+    {
+      Serial.print("[SCD40] Start measurement error: ");
+      printSCD40Error(error);
+      return false;
+    }
+
+    isScd40Initialized = true;
+    Serial.println("[SCD40] Khởi tạo thành công lần đầu!");
+    Serial.println("[SCD40] Chờ dữ liệu sẵn sàng (5 giây)...");
+    delay(5000); // Wait for first measurement
+  }
+
+  // Check if data is ready - retry up to 10 times (10 seconds max)
+  uint16_t error;
+  bool dataReady = false;
+  int retries = 0;
+  const int MAX_RETRIES = 10;
+
+  while (retries < MAX_RETRIES)
+  {
+    error = scd4x.getDataReadyStatus(dataReady);
+    
+    if (error)
+    {
+      Serial.print("[SCD40] Data ready error: ");
+      printSCD40Error(error);
+      return false;
+    }
+
+    if (dataReady)
+    {
+      Serial.printf("[SCD40] Data ready after %d retries\n", retries);
+      break;
+    }
+
+    Serial.printf("[SCD40] Data not ready yet, retry %d/%d...\n", retries + 1, MAX_RETRIES);
+    delay(1000);
+    retries++;
+  }
+
+  if (!dataReady)
+  {
+    Serial.println("[SCD40] Data timeout after 10 seconds!");
+    return false;
+  }
+
+  // Read measurement
+  uint16_t co2;
+  error = scd4x.readMeasurement(co2, temperature, humidity);
+
+  if (error)
+  {
+    Serial.print("[SCD40] Read measurement error: ");
+    printSCD40Error(error);
+    Serial.printf("[SCD40] GPIO pins: SDA=%d, SCL=%d\n", sdaPin, sclPin);
+    return false;
+  }
+
+  Serial.printf("[SCD40] I2C (SDA=%d, SCL=%d) -> CO2: %u ppm, Temp: %.2f°C, Humidity: %.2f%%\n",
+                sdaPin, sclPin, co2, temperature, humidity);
+
+  return true;
 }
 
 unsigned long getEpochTime()
@@ -1115,6 +1391,14 @@ DeviceMatch findFanDevice(const String &naturalId)
 void handleNotFound()
 {
   sendCORSHeaders();
+  Serial.println("------------------------------------------");
+  Serial.println("[404 NOT FOUND]");
+  Serial.printf("[REQUEST METHOD] %s\n", server.method() == HTTP_GET ? "GET" : 
+                                         server.method() == HTTP_POST ? "POST" : 
+                                         server.method() == HTTP_OPTIONS ? "OPTIONS" : "OTHER");
+  Serial.printf("[REQUEST URI] %s\n", server.uri().c_str());
+  Serial.printf("[REQUEST ARGS] %s\n", server.arg("plain").c_str());
+  Serial.println("------------------------------------------");
   sendJson(404, "Không tìm thấy");
 }
 
@@ -1123,6 +1407,7 @@ void handleGetTemperature()
   sendCORSHeaders();
   Serial.println("------------------------------------------");
   Serial.println("Endpoint:/temperature");
+  Serial.println("[DEBUG] Request received!");
 
   String token;
   if (!requireBearerToken(token))
@@ -1131,18 +1416,26 @@ void handleGetTemperature()
     return;
   }
 
-  JsonDocument jsonBody;
-  if (!parsePlainBody(jsonBody))
+  // Get naturalId from query parameter instead of body
+  String naturalId = "";
+  if (server.hasArg("naturalId"))
   {
-    Serial.println("------------------------------------------");
-    return;
+    naturalId = server.arg("naturalId");
+    Serial.printf("[DEBUG] Query param naturalId found: %s\n", naturalId.c_str());
   }
-
-  String naturalId = jsonBody["naturalId"].as<String>();
+  else
+  {
+    Serial.println("[DEBUG] Query param naturalId NOT found!");
+    Serial.printf("[DEBUG] Available args: %d\n", server.args());
+    for (uint8_t i = 0; i < server.args(); i++)
+    {
+      Serial.printf("[DEBUG] Arg %d: %s = %s\n", i, server.argName(i).c_str(), server.arg(i).c_str());
+    }
+  }
 
   if (naturalId == "null" || naturalId.length() == 0)
   {
-    sendJson(400, "Body bắt buộc phải có trường: naturalId");
+    sendJson(400, "Query parameter bắt buộc phải có: ?naturalId=...");
     Serial.println("------------------------------------------");
     return;
   }
@@ -1204,13 +1497,6 @@ void handleGetTemperature()
   }
 
   String module = targetDevice["internal"]["module"].as<String>();
-  if (module != "DS18B20")
-  {
-    Serial.printf("Lỗi: Module '%s' hiện chưa được hỗ trợ\n", module.c_str());
-    sendJson(501, "Module cảm biến chưa được hỗ trợ");
-    Serial.println("------------------------------------------");
-    return;
-  }
 
   if (!targetDevice["gpioPin"].is<JsonArrayConst>() || targetDevice["gpioPin"].size() == 0)
   {
@@ -1219,20 +1505,222 @@ void handleGetTemperature()
     return;
   }
 
-  int gpioPin = targetDevice["gpioPin"][0].as<int>();
-  float temperature = readDS18B20Temperature(gpioPin);
+  JsonDocument data;
 
-  if (temperature == -999.0)
+  if (module == "DS18B20")
   {
-    sendJson(500, "Lỗi: Không thể đọc dữ liệu từ cảm biến");
+    int gpioPin = targetDevice["gpioPin"][0].as<int>();
+    float temperature = readDS18B20Temperature(gpioPin);
+
+    if (temperature == -999.0)
+    {
+      sendJson(500, "Lỗi: Không thể đọc dữ liệu từ cảm biến DS18B20");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    data["tempC"] = serialized(String(temperature, 3));
+  }
+  else if (module == "SHT40")
+  {
+    if (targetDevice["gpioPin"].size() < 2)
+    {
+      sendJson(500, "Lỗi: SHT40 cần 2 GPIO pins (SDA, SCL)");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    int sdaPin = targetDevice["gpioPin"][0].as<int>();
+    int sclPin = targetDevice["gpioPin"][1].as<int>();
+    float temperature, humidity;
+
+    if (!readSCD40Data(sdaPin, sclPin, temperature, humidity))
+    {
+      sendJson(500, "Lỗi: Không thể đọc dữ liệu từ cảm biến SHT40");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    data["tempC"] = serialized(String(temperature, 3));
+  }
+  else if (module == "SCD40")
+  {
+    if (targetDevice["gpioPin"].size() < 2)
+    {
+      sendJson(500, "Lỗi: SCD40 cần 2 GPIO pins (SDA, SCL)");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    int sdaPin = targetDevice["gpioPin"][0].as<int>();
+    int sclPin = targetDevice["gpioPin"][1].as<int>();
+    float temperature, humidity;
+
+    if (!readSCD40Data(sdaPin, sclPin, temperature, humidity))
+    {
+      sendJson(500, "Lỗi: Không thể đọc dữ liệu từ cảm biến SCD40");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    data["tempC"] = serialized(String(temperature, 3));
+  }
+  else
+  {
+    Serial.printf("Lỗi: Module '%s' hiện chưa được hỗ trợ\n", module.c_str());
+    sendJson(501, "Module cảm biến chưa được hỗ trợ");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  sendJsonWithData(200, "Lấy nhiệt độ thành công", data);
+  Serial.println("------------------------------------------");
+}
+
+void handleGetHumidity()
+{
+  sendCORSHeaders();
+  Serial.println("------------------------------------------");
+  Serial.println("Endpoint:/humidity");
+  Serial.println("[DEBUG] Request received!");
+
+  String token;
+  if (!requireBearerToken(token))
+  {
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  // Get naturalId from query parameter instead of body
+  String naturalId = "";
+  if (server.hasArg("naturalId"))
+  {
+    naturalId = server.arg("naturalId");
+    Serial.printf("[DEBUG] Query param naturalId found: %s\n", naturalId.c_str());
+  }
+  else
+  {
+    Serial.println("[DEBUG] Query param naturalId NOT found!");
+    Serial.printf("[DEBUG] Available args: %d\n", server.args());
+    for (uint8_t i = 0; i < server.args(); i++)
+    {
+      Serial.printf("[DEBUG] Arg %d: %s = %s\n", i, server.argName(i).c_str(), server.arg(i).c_str());
+    }
+  }
+
+  if (naturalId == "null" || naturalId.length() == 0)
+  {
+    sendJson(400, "Query parameter bắt buộc phải có: ?naturalId=...");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  Serial.printf("[REQUEST] naturalId: %s\n", naturalId.c_str());
+
+  JsonDocument configDoc;
+  if (deserializeJson(configDoc, config))
+  {
+    sendJson(500, "Lỗi thiết bị khi parse JSON");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonArrayConst devicesArray;
+  if (configDoc.containsKey("devices"))
+  {
+    devicesArray = configDoc["devices"].as<JsonArrayConst>();
+  }
+  else
+  {
+    sendJson(500, "Lỗi thiết bị khi parse JSON");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonObjectConst targetDevice;
+  bool deviceFound = false;
+  for (JsonObjectConst device : devicesArray)
+  {
+    String category = device["category"].as<String>();
+    if (category != "HUMIDITY")
+    {
+      continue;
+    }
+
+    if (device["naturalId"].as<String>() == naturalId)
+    {
+      targetDevice = device;
+      deviceFound = true;
+      Serial.printf("[DEVICE FOUND] naturalId: %s\n", naturalId.c_str());
+      break;
+    }
+  }
+
+  if (!deviceFound)
+  {
+    Serial.printf("[DEVICE NOT FOUND] naturalId: %s\n", naturalId.c_str());
+    sendJson(404, "Không tìm thấy cảm biến độ ẩm có naturalId tương ứng");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  if (!targetDevice.containsKey("internal") || !targetDevice["internal"].containsKey("module"))
+  {
+    sendJson(500, "Lỗi: Cảm biến thiếu thông tin module");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  String module = targetDevice["internal"]["module"].as<String>();
+
+  if (!targetDevice["gpioPin"].is<JsonArrayConst>() || targetDevice["gpioPin"].size() < 2)
+  {
+    sendJson(500, "Lỗi: SHT40 cần 2 GPIO pins (SDA, SCL)");
     Serial.println("------------------------------------------");
     return;
   }
 
   JsonDocument data;
-  data["tempC"] = serialized(String(temperature, 3));
 
-  sendJsonWithData(200, "Lấy nhiệt độ thành công", data);
+  if (module == "SHT40")
+  {
+    int sdaPin = targetDevice["gpioPin"][0].as<int>();
+    int sclPin = targetDevice["gpioPin"][1].as<int>();
+    float temperature, humidity;
+
+    if (!readSCD40Data(sdaPin, sclPin, temperature, humidity))
+    {
+      sendJson(500, "Lỗi: Không thể đọc dữ liệu từ cảm biến SHT40");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    data["humidity"] = serialized(String(humidity, 2));
+  }
+  else if (module == "SCD40")
+  {
+    int sdaPin = targetDevice["gpioPin"][0].as<int>();
+    int sclPin = targetDevice["gpioPin"][1].as<int>();
+    float temperature, humidity;
+
+    if (!readSCD40Data(sdaPin, sclPin, temperature, humidity))
+    {
+      sendJson(500, "Lỗi: Không thể đọc dữ liệu từ cảm biến SCD40");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    data["humidity"] = serialized(String(humidity, 2));
+  }
+  else
+  {
+    Serial.printf("Lỗi: Module '%s' không hỗ trợ đo độ ẩm\n", module.c_str());
+    sendJson(501, "Module cảm biến không hỗ trợ đo độ ẩm");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  sendJsonWithData(200, "Lấy độ ẩm thành công", data);
   Serial.println("------------------------------------------");
 }
 
@@ -1270,74 +1758,6 @@ void handleGetConfig()
   }
 
   sendJsonWithData(200, "Lấy JSON cấu hình thiết bị thành công", data);
-  Serial.println("------------------------------------------");
-}
-
-void handleUpdateConfig()
-{
-  sendCORSHeaders();
-  Serial.println("------------------------------------------");
-  Serial.println("Endpoint:/config");
-
-  String token;
-  if (!requireBearerToken(token))
-  {
-    Serial.println("------------------------------------------");
-    return;
-  }
-
-  JsonDocument jsonBody;
-  if (!parsePlainBody(jsonBody))
-  {
-    Serial.println("------------------------------------------");
-    return;
-  }
-
-  JsonDocument currentConfigDoc;
-  bool hasCurrentConfig = loadConfigDocument(currentConfigDoc);
-
-  String newConfig;
-
-  // Log request details
-  Serial.println("[CONFIG UPDATE REQUEST]");
-
-  // Check if request has the new format { roomCode, devices }
-  if (jsonBody.containsKey("roomCode") && jsonBody.containsKey("devices"))
-  {
-    // New format - save entire object with roomCode and devices
-    Serial.println("[FORMAT] New format with roomCode");
-    serializeJson(jsonBody, newConfig);
-  }
-  else if (jsonBody.containsKey("devices"))
-  {
-    // Old format with just devices array - preserve existing roomCode when possible
-    Serial.println("[FORMAT] Legacy format (devices only)");
-    JsonDocument wrappedConfig;
-    if (jsonBody.containsKey("roomCode") && !jsonBody["roomCode"].isNull())
-    {
-      wrappedConfig["roomCode"] = jsonBody["roomCode"].as<String>();
-    }
-    else if (hasCurrentConfig && currentConfigDoc.containsKey("roomCode"))
-    {
-      wrappedConfig["roomCode"] = currentConfigDoc["roomCode"].as<String>();
-    }
-    wrappedConfig["devices"] = jsonBody["devices"];
-    serializeJson(wrappedConfig, newConfig);
-  }
-
-  if (newConfig.length() > 0 && newConfig != "null")
-  {
-    Serial.printf("Dữ liệu nhận được: %s\n", newConfig.c_str());
-    UpdateConfigJSON(newConfig);
-    Serial.println("[CONFIG UPDATE SUCCESS]");
-    sendJson(200, "Cập nhật JSON cấu hình thiết bị thành công");
-  }
-  else
-  {
-    Serial.println("[CONFIG UPDATE FAILED] Missing roomCode or devices");
-    sendJson(400, "Thiếu trường roomCode hoặc devices");
-  }
-
   Serial.println("------------------------------------------");
 }
 
@@ -1770,16 +2190,223 @@ void handleLogin()
   Serial.println("------------------------------------------");
 }
 
-void handleDebugClearConfig()
+void handleTelemetry()
 {
   sendCORSHeaders();
   Serial.println("------------------------------------------");
-  Serial.println("Endpoint:/debug/clear-config");
+  Serial.println("Endpoint:/telemetry");
 
-  clearConfiguration();
+  String token;
+  if (!requireBearerToken(token))
+  {
+    Serial.println("------------------------------------------");
+    return;
+  }
 
-  sendJson(200, "Đã xóa config từ preferences, sẽ sử dụng config mặc định");
+  JsonDocument configDoc;
+  if (deserializeJson(configDoc, config))
+  {
+    sendJson(500, "Lỗi thiết bị khi parse JSON");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonArrayConst devicesArray;
+  if (configDoc.containsKey("devices"))
+  {
+    devicesArray = configDoc["devices"].as<JsonArrayConst>();
+  }
+  else
+  {
+    sendJson(500, "Lỗi thiết bị khi parse JSON");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  // Get room code
+  String roomCode = "";
+  if (configDoc.containsKey("roomCode"))
+  {
+    roomCode = configDoc["roomCode"].as<String>();
+  }
+
+  // Collect all TEMPERATURE devices and their data
+  JsonDocument responseData;
+  responseData["roomCode"] = roomCode;
+
+  JsonArray devicesArray_out = responseData.createNestedArray("devices");
+
+  bool hasTemperatureDevices = false;
+  for (JsonObjectConst device : devicesArray)
+  {
+    String category = device["category"].as<String>();
+    if (category != "TEMPERATURE")
+    {
+      continue;
+    }
+
+    hasTemperatureDevices = true;
+
+    String naturalId = device["naturalId"].as<String>();
+    Serial.printf("[TELEMETRY] Processing device: %s\n", naturalId.c_str());
+
+    // Check if device has internal.module
+    if (!device.containsKey("internal") || !device["internal"].containsKey("module"))
+    {
+      Serial.printf("[TELEMETRY] Device %s: Missing module info\n", naturalId.c_str());
+      continue;
+    }
+
+    String module = device["internal"]["module"].as<String>();
+
+    // Get GPIO pin
+    if (!device["gpioPin"].is<JsonArrayConst>() || device["gpioPin"].size() == 0)
+    {
+      Serial.printf("[TELEMETRY] Device %s: No GPIO pin found\n", naturalId.c_str());
+      continue;
+    }
+
+    float temperature = 0;
+    bool readSuccess = false;
+
+    if (module == "DS18B20")
+    {
+      int gpioPin = device["gpioPin"][0].as<int>();
+      temperature = readDS18B20Temperature(gpioPin);
+      readSuccess = (temperature != -999.0);
+    }
+    else if (module == "SHT40")
+    {
+      if (device["gpioPin"].size() < 2)
+      {
+        Serial.printf("[TELEMETRY] Device %s: SHT40 needs 2 GPIO pins\n", naturalId.c_str());
+        continue;
+      }
+
+      int sdaPin = device["gpioPin"][0].as<int>();
+      int sclPin = device["gpioPin"][1].as<int>();
+      float humidity;
+      readSuccess = readSCD40Data(sdaPin, sclPin, temperature, humidity);
+    }
+    else if (module == "SCD40")
+    {
+      if (device["gpioPin"].size() < 2)
+      {
+        Serial.printf("[TELEMETRY] Device %s: SCD40 needs 2 GPIO pins\n", naturalId.c_str());
+        continue;
+      }
+
+      int sdaPin = device["gpioPin"][0].as<int>();
+      int sclPin = device["gpioPin"][1].as<int>();
+      float humidity;
+      readSuccess = readSCD40Data(sdaPin, sclPin, temperature, humidity);
+    }
+    else
+    {
+      Serial.printf("[TELEMETRY] Device %s: Module %s not supported\n", naturalId.c_str(), module.c_str());
+      continue;
+    }
+
+    if (!readSuccess)
+    {
+      Serial.printf("[TELEMETRY] Device %s: Failed to read temperature\n", naturalId.c_str());
+      continue;
+    }
+
+    // Add device data to response
+    JsonObject deviceItem = devicesArray_out.createNestedObject();
+    deviceItem["naturalId"] = naturalId;
+    deviceItem["category"] = "TEMPERATURE";
+
+    JsonObject dataObj = deviceItem.createNestedObject("data");
+    dataObj["tempC"] = serialized(String(temperature, 3));
+
+    Serial.printf("[TELEMETRY] Device %s: tempC = %.2f\n", naturalId.c_str(), temperature);
+  }
+
+  sendJsonWithData(200, "Success", responseData);
   Serial.println("------------------------------------------");
+}
+
+void initAllSensors()
+{
+  Serial.println("\n========================================");
+  Serial.println("[SENSOR INITIALIZATION] Bắt đầu...");
+  Serial.println("========================================");
+
+  JsonDocument configDoc;
+  if (deserializeJson(configDoc, config))
+  {
+    Serial.println("[SENSOR INIT] Lỗi parse config JSON!");
+    return;
+  }
+
+  JsonArrayConst devicesArray;
+  if (configDoc.containsKey("devices"))
+  {
+    devicesArray = configDoc["devices"].as<JsonArrayConst>();
+  }
+  else
+  {
+    Serial.println("[SENSOR INIT] Không tìm thấy devices trong config!");
+    return;
+  }
+
+  // Scan config để init SCD40 sensors
+  bool hasSCD40 = false;
+  int scd40SdaPin = 21;
+  int scd40SclPin = 22;
+
+  for (JsonObjectConst device : devicesArray)
+  {
+    if (!device.containsKey("internal") || !device["internal"].containsKey("module"))
+    {
+      continue;
+    }
+
+    String module = device["internal"]["module"].as<String>();
+    
+    if (module != "SCD40")
+    {
+      continue;
+    }
+
+    // Found SCD40 device, get GPIO pins
+    if (device.containsKey("gpioPin") && device["gpioPin"].size() >= 2)
+    {
+      scd40SdaPin = device["gpioPin"][0].as<int>();
+      scd40SclPin = device["gpioPin"][1].as<int>();
+      hasSCD40 = true;
+
+      String naturalId = device["naturalId"].as<String>();
+      Serial.printf("[SENSOR INIT] Found SCD40: %s (SDA=%d, SCL=%d)\n", 
+                    naturalId.c_str(), scd40SdaPin, scd40SclPin);
+      break; // Only one SCD40 per board
+    }
+  }
+
+  // Init SCD40 if found in config
+  if (hasSCD40 && !isScd40Initialized)
+  {
+    Serial.println("[SENSOR INIT] Initializing SCD40...");
+    float temp, humidity;
+    
+    // Call readSCD40Data to initialize (will set isScd40Initialized = true)
+    if (readSCD40Data(scd40SdaPin, scd40SclPin, temp, humidity))
+    {
+      Serial.printf("[SENSOR INIT] SCD40 initialized successfully!\n");
+      Serial.printf("[SENSOR INIT] First read: Temp=%.2f°C, Humidity=%.2f%%\n", temp, humidity);
+    }
+    else
+    {
+      Serial.println("[SENSOR INIT] SCD40 initialization failed!");
+      Serial.println("[SENSOR INIT] Check hardware connections and I2C pins");
+    }
+  }
+
+  Serial.println("========================================");
+  Serial.println("[SENSOR INITIALIZATION] Hoàn tất");
+  Serial.println("========================================\n");
 }
 
 void setup()
@@ -1807,7 +2434,7 @@ void setup()
     Serial.print(".");
     timeout_counter++;
 
-    if (timeout_counter > 10)
+    if (timeout_counter > 4)
     {
       Serial.println("\nKết nối quá thời gian! Đang khởi động lại...");
       ESP.restart();
@@ -1818,52 +2445,96 @@ void setup()
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  Serial.println("Đang đồng bộ thời gian từ NTP...");
+  // Tải config để lấy timeApi
+  CheckConfigJSON();
 
-  struct tm timeinfo;
-  int retryCounter = 0;
-  while ((!getLocalTime(&timeinfo) || timeinfo.tm_year < 126) && retryCounter < 2)
+  // Thử sync time từ API trước
+  JsonDocument configDoc;
+  String timeApiUrl = "";
+  if (deserializeJson(configDoc, config) == DeserializationError::Ok)
   {
-    delay(500);
-    Serial.print("*");
-    retryCounter++;
-  }
-
-  if (retryCounter >= 2)
-  {
-    Serial.println("\n[LỖI BẢO MẬT] Không thể đồng bộ thời gian từ NTP!");
-    Serial.println("Để đảm bảo an toàn, hệ thống sẽ tự động khởi động lại sau 1 giây...");
-    delay(1000);
-    ESP.restart();
+    if (configDoc.containsKey("timeApi"))
+    {
+      timeApiUrl = configDoc["timeApi"].as<String>();
+      Serial.printf("[SETUP] timeApi từ config: %s\n", timeApiUrl.c_str());
+    }
+    else
+    {
+      Serial.println("[SETUP] Config không có trường timeApi");
+    }
   }
   else
   {
-    Serial.println("\nĐồng bộ thời gian thành công!");
+    Serial.println("[SETUP] Lỗi parse config JSON");
   }
 
-  CheckConfigJSON();
+  bool timeSyncSuccess = false;
+  if (timeApiUrl.length() > 0 && timeApiUrl != "null")
+  {
+    timeSyncSuccess = syncTimeFromApi(timeApiUrl);
+  }
+  else
+  {
+    Serial.println("[SETUP] timeApi rỗng hoặc null, bỏ qua API sync");
+  }
+
+  // Nếu API sync thất bại, fallback sang NTP
+  if (!timeSyncSuccess)
+  {
+    Serial.println("[TIME SYNC] API sync thất bại, fallback sang NTP...");
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    Serial.println("Đang đồng bộ thời gian từ NTP...");
+
+    struct tm timeinfo;
+    int retryCounter = 0;
+    while ((!getLocalTime(&timeinfo) || timeinfo.tm_year < 126) && retryCounter < 2)
+    {
+      delay(500);
+      Serial.print("*");
+      retryCounter++;
+    }
+
+    if (retryCounter >= 2)
+    {
+      Serial.println("\n[LỖI BẢO MẬT] Không thể đồng bộ thời gian từ API hoặc NTP!");
+      Serial.println("Để đảm bảo an toàn, hệ thống sẽ tự động khởi động lại sau 1 giây...");
+      delay(1000);
+      ESP.restart();
+    }
+    else
+    {
+      Serial.println("\nĐồng bộ thời gian từ NTP thành công!");
+    }
+  }
+  else
+  {
+    Serial.println("Đồng bộ thời gian từ API thành công!");
+  }
+
   server.collectHeaders(headerKeys, headerKeysCount);
 
   server.on("/auth/login", HTTP_POST, handleLogin);
   server.on("/control", HTTP_POST, handleControl);
-  server.on("/temperature", HTTP_POST, handleGetTemperature);
-  server.on("/config", HTTP_PATCH, handleUpdateConfig);
+  server.on("/temperature", HTTP_GET, handleGetTemperature);
+  server.on("/humidity", HTTP_GET, handleGetHumidity);
   server.on("/setup", HTTP_GET, handleGetConfig);
-  server.on("/debug/clear-config", HTTP_GET, handleDebugClearConfig);
+  server.on("/telemetry", HTTP_GET, handleTelemetry);
 
   server.on("/auth/login", HTTP_OPTIONS, handleCORS);
   server.on("/control", HTTP_OPTIONS, handleCORS);
   server.on("/temperature", HTTP_OPTIONS, handleCORS);
-  server.on("/config", HTTP_OPTIONS, handleCORS);
+  server.on("/humidity", HTTP_OPTIONS, handleCORS);
   server.on("/setup", HTTP_OPTIONS, handleCORS);
-  server.on("/debug/clear-config", HTTP_OPTIONS, handleCORS);
+  server.on("/telemetry", HTTP_OPTIONS, handleCORS);
 
   server.onNotFound(handleNotFound);
   server.begin();
+  
+  Serial.println("========================================");
+  Serial.println("[SERVER STARTED] Listening on port 8080");
+  Serial.println("========================================");
 
   // Initialize IRsend from config
-  JsonDocument configDoc;
   if (deserializeJson(configDoc, config) == DeserializationError::Ok)
   {
     JsonArrayConst devicesArray = configDoc["devices"].as<JsonArrayConst>();
@@ -1902,9 +2573,13 @@ void setup()
   }
 
   reinitializeRelayPins();
+
+  // Init sensors from config
+  initAllSensors();
 }
 
 void loop()
 {
   server.handleClient();
+  delay(1); // Avoid WDT timeout
 }

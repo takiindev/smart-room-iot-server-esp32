@@ -2,91 +2,124 @@
 
 Tài liệu hoàn chỉnh cho firmware điều khiển thiết bị smart home trên ESP32.
 
-## Danh sách tài liệu
+## Cấu trúc Thư mục Tài liệu
 
-1. **[auth.md](auth.md)** - API đăng nhập và quản lý JWT token
-2. **[config.md](config.md)** - API lấy và cập nhật cấu hình thiết bị
-3. **[control.md](control.md)** - API điều khiển thiết bị (LIGHT, FAN, AIR_CONDITION)
-4. **[DEVICE_CONFIG_STRUCTURE.md](DEVICE_CONFIG_STRUCTURE.md)** - Tham khảo nhanh cấu trúc config cho tất cả loại thiết bị
+Tài liệu được chia thành 2 thư mục chính:
+
+### API_DOCS - Hướng dẫn sử dụng API
+
+Chứa tài liệu chi tiết về từng endpoint API, cách gọi, request/response format.
+
+| File | Nội dung |
+|------|---------|
+| `README.md` | Tổng quan tất cả API endpoints |
+| `authentication.md` | API đăng nhập: `POST /auth/login` |
+| `temperature.md` | API đọc nhiệt độ: `GET /temperature?naturalId=...` |
+| `humidity.md` | API đọc độ ẩm: `GET /humidity?naturalId=...` |
+| `telemetry.md` | API lấy dữ liệu toàn hệ thống: `GET /telemetry` |
+| `control.md` | API điều khiển thiết bị: `POST /control` |
+| `setup.md` | API lấy cấu hình: `GET /setup` |
+
+Khi nào đọc: Khi muốn biết cách gọi API, format request/response, lỗi có thể xảy ra.
+
+### GUIDELINES - Hướng dẫn lập trình & kỹ thuật
+
+Chứa hướng dẫn chi tiết về cách cài đặt, cấu hình, debug hệ thống.
+
+| File | Nội dung |
+|------|---------|
+| `README.md` | Overview + Quick start + Common tasks |
+| `library-installation.md` | Cách cài đặt tất cả thư viện cần thiết |
+| `sensor-initialization.md` | Chiến lược khởi tạo sensor (Early Init strategy) |
+| `device-config-structure.md` | Chi tiết cấu trúc JSON config cho mỗi loại device |
+| `scd40-sensor.md` | Hướng dẫn kỹ thuật chi tiết về cảm biến SCD40 |
+
+Khi nào đọc: Khi cần setup environment, debug sensor, thêm device mới, hiểu cách hệ thống hoạt động.
+
+## Quick Start
+
+1. Lần đầu setup: Đọc `GUIDELINES/README.md` → `library-installation.md`
+2. Hiểu hệ thống: Đọc `GUIDELINES/sensor-initialization.md`
+3. Cấu hình device: Đọc `GUIDELINES/device-config-structure.md`
+4. Gọi API: Đọc `API_DOCS/README.md` + file endpoint cụ thể
+5. Debug SCD40: Đọc `GUIDELINES/scd40-sensor.md`
+
+## Cấu trúc dự án
 
 ## Cấu trúc dự án
 
 ```
 SmartRoom-Client/
-├── SmartRoom-Client.ino          # Firmware chính
-├── config.json                    # File cấu hình thiết bị
-├── setup.json                     # File cấu hình WiFi & Server
-├── SERIAL_LOGGING_GUIDE.md       # Hướng dẫn debug qua Serial
-├── RELAY_CONTROL_TROUBLESHOOTING.md
-└── smart-room-iot-server-esp32/
-    ├── README.md                  # (File này) Tài liệu tổng quát
-    ├── auth.md                    # Tài liệu API Login
-    ├── config.md                  # Tài liệu API Config
-    ├── control.md                 # Tài liệu API Control
-    └── code.ino                   # Version server cũ (không sử dụng)
+├── SmartRoom-Client.ino                # Firmware chính
+├── config.json                         # Cấu hình thiết bị (device config)
+├── test_scd.md                         # Test code cho SCD40 sensor
+│
+└── smart-room-iot-server-esp32/        # Thư mục tài liệu
+    ├── README.md                       # (File này) Tổng quan & cấu trúc
+    │
+    ├── API_DOCS/                       # Hướng dẫn sử dụng API
+    │   ├── README.md                   # API overview
+    │   ├── authentication.md           # /auth/login
+    │   ├── temperature.md              # /temperature
+    │   ├── humidity.md                 # /humidity
+    │   ├── telemetry.md                # /telemetry
+    │   ├── control.md                  # /control
+    │   └── setup.md                    # /setup
+    │
+    └── GUIDELINES/                     # Hướng dẫn lập trình & kỹ thuật
+        ├── README.md                   # Overview + Quick start
+        ├── library-installation.md     # Cài đặt thư viện
+        ├── sensor-initialization.md    # Chiến lược init sensor
+        ├── device-config-structure.md  # Cấu trúc config JSON
+        └── scd40-sensor.md             # Hướng dẫn SCD40 kỹ thuật
 ```
 
-## Bắt đầu nhanh
+## 🎯 Bắt đầu nhanh
 
-### 1. Chuẩn bị thiết bị
-- ESP32 Dev Module
-- DHT22 sensor (nhiệt độ độ ẩm)
-- IR Sender module (điều khiển AC)
-- Relay module (điều khiển đèn, quạt)
-- WiFi router (2.4GHz)
+### Cho lần đầu setup
 
-### 2. Upload firmware
-```bash
-# Sử dụng Arduino IDE
-1. Cài đặt board: ESP32 Dev Module
-2. Cài đặt thư viện: ArduinoJson, IRremoteESP8266, CustomJWT, DHT
-3. Upload SmartRoom-Client.ino vào ESP32
-```
+1. **Cài đặt thư viện:** Xem [`GUIDELINES/library-installation.md`](GUIDELINES/library-installation.md)
+   - Cài ArduinoJson, IRremoteESP8266, DallasTemperature, **SensirionI2cScd4x**
 
-### 3. Cấu hình thiết bị
-```bash
-# Chỉnh sửa setup.json cho WiFi & Server
-# Chỉnh sửa config.json cho các thiết bị
-# Upload vào ESP32
-```
+2. **Upload firmware:**
+   - Upload `SmartRoom-Client.ino` vào ESP32 Dev Module
 
-### 4. Test API
-```bash
-# Login
-curl -X POST http://192.168.1.100:8080/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"vuesp","password":"123456789"}'
+3. **Cấu hình device:**
+   - Sửa `config.json` theo hướng dẫn [`GUIDELINES/device-config-structure.md`](GUIDELINES/device-config-structure.md)
 
-# Lấy config
-curl -X GET http://192.168.1.100:8080/setup \
-  -H "Authorization: Bearer <token>"
+4. **Hiểu hệ thống:**
+   - Đọc [`GUIDELINES/sensor-initialization.md`](GUIDELINES/sensor-initialization.md) để hiểu cách sensor khởi tạo
 
-# Điều khiển đèn
-curl -X POST http://192.168.1.100:8080/control \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
-  -d '{"naturalId":"LIGHT_01","category":"LIGHT","power":"ON"}'
-```
+### Cho developer muốn debug
+
+- **Debug SCD40:** Xem [`GUIDELINES/scd40-sensor.md`](GUIDELINES/scd40-sensor.md)
+- **Hiểu cấu trúc config:** Xem [`GUIDELINES/device-config-structure.md`](GUIDELINES/device-config-structure.md)
+
+### Cho lập trình viên client
+
+- **Gọi API:** Bắt đầu từ [`API_DOCS/README.md`](API_DOCS/README.md)
+- **Login:** Xem [`API_DOCS/authentication.md`](API_DOCS/authentication.md)
+- **Đọc sensor:** Xem [`API_DOCS/temperature.md`](API_DOCS/temperature.md), [`humidity.md`](API_DOCS/humidity.md), [`telemetry.md`](API_DOCS/telemetry.md)
+- **Điều khiển device:** Xem [`API_DOCS/control.md`](API_DOCS/control.md)
 
 ## API Endpoints
 
-| Method | Endpoint | Mô tả |
-| :----: | :------- | :---- |
-| POST | `/auth/login` | Đăng nhập lấy JWT token |
-| GET | `/setup` | Lấy cấu hình thiết bị hiện tại |
-| PATCH | `/config` | Cập nhật cấu hình thiết bị |
-| POST | `/control` | Điều khiển thiết bị (LIGHT, FAN, AC) |
-| POST | `/get/temperature` | Lấy nhiệt độ hiện tại |
-| GET | `/debug/clear-config` | Xóa config từ preferences (debug) |
+Tất cả chi tiết về API xem `API_DOCS/README.md`
 
-## Bảo mật
+| Method | Endpoint | Mô tả | Tài liệu |
+| :----: | :------- | :---- | :------- |
+| POST | `/auth/login` | Đăng nhập lấy JWT token | `authentication.md` |
+| GET | `/setup` | Lấy cấu hình thiết bị hiện tại | `setup.md` |
+| GET | `/temperature?naturalId=...` | Lấy dữ liệu nhiệt độ | `temperature.md` |
+| GET | `/humidity?naturalId=...` | Lấy dữ liệu độ ẩm | `humidity.md` |
+| GET | `/telemetry` | Lấy dữ liệu từ tất cả sensor | `telemetry.md` |
+| POST | `/control` | Điều khiển thiết bị (LIGHT, FAN, AC) | `control.md` |
 
-- Tất cả API đều yêu cầu JWT token trừ `/auth/login`
-- Token có thời gian sống 1 giờ
-- Username/password mặc định: `vuesp` / `123456789`
-- CORS được kích hoạt cho toàn bộ origin
+Note: Tất cả endpoint (ngoại trừ `/auth/login`) đều yêu cầu header `Authorization: Bearer <token>`
 
 ## Cấu trúc Config JSON
+
+Chi tiết đầy đủ xem `GUIDELINES/device-config-structure.md`
 
 ### Toàn bộ Config
 
@@ -94,210 +127,47 @@ curl -X POST http://192.168.1.100:8080/control \
 {
   "roomCode": "R-VU",
   "devices": [
-    { ... device objects ... }
+    { "naturalId": "...", "category": "...", ... }
   ]
 }
 ```
 
-### Device - Relay (LIGHT, FAN)
+### Loại Device được hỗ trợ
 
-```json
-{
-  "naturalId": "LIGHT_01",
-  "category": "LIGHT",
-  "translations": {
-    "vi": { "name": "Đèn A101 1", "description": "..." },
-    "en": { "name": "Light A101 1", "description": "..." }
-  },
-  "specificType": "GPIO",
-  "controlType": "GPIO",
-  "gpioPin": [13],
-  "internal": {
-    "peripheralType": "RELAY"
-  }
-}
-```
+| Loại | Category | Module | Ví dụ |
+|------|----------|--------|-------|
+| Cảm biến nhiệt độ 1-Wire | TEMPERATURE | DS18B20 | Đo nhiệt độ phòng |
+| Cảm biến SCD40 | TEMPERATURE, HUMIDITY | SCD40 | Đo T°, độ ẩm, CO2 |
+| Đèn | LIGHT | RELAY | Bật/tắt đèn phòng |
+| Quạt | FAN | RELAY | Điều chỉnh tốc độ quạt |
+| Điều hòa | AIR_CONDITION | IR_SENDER | Điều khiển AC qua IR |
 
-**Giải thích:**
-- `naturalId`: Định danh duy nhất của thiết bị
-- `category`: Loại thiết bị (`LIGHT`, `FAN`, `AIR_CONDITION`, `TEMPERATURE`, `POWER_CONSUMPTION`)
-- `gpioPin`: Mảng số pin GPIO (Relay device có 1-3 pins)
-- `internal.peripheralType`: Loại peripheral (`RELAY`, `IR_SENDER`)
+Xem chi tiết từng loại tại `GUIDELINES/device-config-structure.md`
 
-### Device - IR Sender (AIR_CONDITION)
+## Bảo mật
 
-```json
-{
-  "naturalId": "LABAC1",
-  "category": "AIR_CONDITION",
-  "controlType": "GPIO",
-  "specificType": "IR_SEND",
-  "gpioPin": [18],
-  "translations": { ... },
-  "internal": {
-    "peripheralType": "IR_SENDER",
-    "brand": "LG",
-    "codeConfigs": {
-      "power": {
-        "ON": "0x8800F43",
-        "OFF": "0x88C0051"
-      },
-      "mode": {
-        "COOL": "0x8808F4B",
-        "HEAT": "0x880C556",
-        "DRY": "0x880910A",
-        "FAN": "0x880A30D",
-        "AUTO": "0x880B151"
-      },
-      "speed": {
-        "1": "0x880A30D",
-        "2": "0x880A32F",
-        "3": "0x880A341"
-      },
-      "temperature": {
-        "16": "0x880A14F",
-        "17": "0x880A163",
-        ...
-        "30": "0x880A267"
-      },
-      "swing": {
-        "ON": "0x8810001"
-      }
-    }
-  }
-}
-```
+- Tất cả API (ngoại trừ `/auth/login`) đều yêu cầu JWT token
+- Token lifetime: 1 giờ (3600 giây)
+- Default credentials: `vuesp` / `123456789`
+- CORS: Được kích hoạt cho tất cả origin
+- IMPORTANT: Thay đổi password trong production!
 
-**Giải thích:**
-- `internal.brand`: Hãng AC (`LG`, `SAMSUNG`, `PANASONIC`)
-- `internal.codeConfigs`: Object chứa tất cả mã IR cho các lệnh
-- `codeConfigs.power`, `mode`, `speed`, `temperature`, `swing`: Mã IR hex cho mỗi lệnh
-- Không cần field `bits` (mặc định LG dùng 28 bits)
-- Mã IR phải là chuỗi hex bắt đầu với `0x`
+## Danh sách tài liệu ngoài
 
-## Mở rộng - Thêm hãng AC mới
+Có các file markdown khác trong thư mục gốc (SmartRoom-Client/):
 
-### 1. Thêm hàm gửi IR
+| File | Mô tả |
+|------|-------|
+| `SERIAL_LOGGING_GUIDE.md` | Hướng dẫn đọc serial logs |
+| `RELAY_CONTROL_TROUBLESHOOTING.md` | Debug relay/LED issues |
+| `SCD40_DEBUGGING.md` | Debug cảm biến SCD40 |
+| `test_scd.md` | Test code ví dụ cho SCD40 |
 
-```cpp
-bool sendDaikinIrCode(uint32_t code, uint16_t bits)
-{
-  // Daikin có protocol riêng, cần xử lý khác
-  // irsend.sendDaikin(...);
-  return true;
-}
-```
+## Liên kết nhanh
 
-### 2. Đăng ký vào registry
-
-```cpp
-const BrandIrSender kBrandIrSenders[] = {
-    {"LG", sendLgIrCode},
-    {"SAMSUNG", sendSamsung36IrCode},
-    {"PANASONIC", sendPanasonicIrCode},
-    {"DAIKIN", sendDaikinIrCode},  // Thêm dòng này
-};
-```
-
-### 3. Cập nhật config với hãng mới
-
-```json
-{
-  "naturalId": "LAB_AC_DAIKIN",
-  "category": "AIR_CONDITION",
-  "...": "...",
-  "internal": {
-    "peripheralType": "IR_SENDER",
-    "brand": "DAIKIN",
-    "codeConfigs": { ... }
-  }
-}
-```
-
-## Debug & Troubleshooting
-
-### Serial Monitor Output
-
-```
-[LOGIN ATTEMPT] username: vuesp
-[LOGIN SUCCESS]
-[TOKEN] eyJhbGc...
-
-[REQUEST] naturalId: LABAC1, category: AIR_CONDITION
-[DEVICE FOUND] naturalId: LABAC1
-[Thực thi] setTemperatureAC() -> Hãng LG, mã 0x880A1EF, bits 28
-
-[API RESPONSE]
-{
-  "status": 200,
-  "message": "Điều khiển AC thành công",
-  "timestamp": "2026-07-07T03:28:27Z"
-}
-[END RESPONSE]
-```
-
-### Nếu AC không hoạt động
-
-1. **Kiểm tra cấu trúc config:**
-   - Device phải có `internal` object
-   - `internal.peripheralType` phải là `"IR_SENDER"`
-   - `internal.brand` phải là một trong: `LG`, `SAMSUNG`, `PANASONIC`
-   - `internal.codeConfigs` phải có đầy đủ sections: `power`, `mode`, `speed`, `temperature`, `swing`
-
-2. **Kiểm tra mã IR hex:**
-   - Mã phải bắt đầu với `0x`
-   - Ví dụ: `"ON": "0x8800F43"` (đúng), `"ON": "8800F43"` (sai)
-   - Mỗi key trong section phải có giá trị (ví dụ: `temperature` phải có keys từ `"16"` đến `"30"`)
-
-3. **Kiểm tra Serial Monitor:**
-   - Xem log `[Thực thi]` để biết lệnh nào đang được gửi
-   - Nếu thấy lỗi `"Lỗi: Thiếu mã config..."` nghĩa là thiếu key trong `codeConfigs`
-   - Nếu thấy `"Lỗi: Không có hàm gửi IR..."` nghĩa là brand chưa được đăng ký
-
-4. **Reset config và thử lại:**
-   ```bash
-   # Gọi endpoint clear config
-   curl http://172.16.64.200:8080/debug/clear-config
-   
-   # ESP32 sẽ sử dụng config mặc định từ code
-   # Sau đó upload config mới qua /config endpoint
-   ```
-
-5. **Kiểm tra hardware:**
-   - IR LED có kết nối đúng GPIO pin không (mặc định GPIO 18)
-   - IR LED có nguồn điện đủ không
-   - Khoảng cách giữa IR sender và AC receiver (nên < 5m)
-
-### Serial Logging Guide
-
-Xem file [SERIAL_LOGGING_GUIDE.md](../SERIAL_LOGGING_GUIDE.md) để hiểu thêm về các log message.
-
-## Thay đổi gần đây
-
-### v2.1 (2026-07-07)
-- ✅ Thêm hỗ trợ `AIR_CONDITION` (AC control) qua IR sender
-- ✅ Thêm `BrandIrSender` registry cho mở rộng AC brands (LG, Samsung, Panasonic)
-- ✅ Cập nhật cấu trúc config: `internal` object chứa `peripheralType`, `brand`, `codeConfigs`
-- ✅ Loại bỏ field `bits` (mặc định 28 cho LG, tự động theo brand)
-- ✅ Thêm endpoint `/debug/clear-config` cho việc debug và reset config
-- ✅ Cải thiện Serial logging với markers rõ ràng: `[LOGIN]`, `[DEVICE FOUND]`, `[Thực thi]`
-- ✅ Sửa lỗi validation: AC speed chỉ hỗ trợ 1-3 (không phải 1-5)
-- ✅ Cập nhật IR codes từ LG AC thực tế (đã test và hoạt động)
-
-### v2.0 (2026-07-03)
-- ✅ Thêm hỗ trợ `roomCode` trong config
-- ✅ Thay đổi response format: `{status, message, data, timestamp}`
-- ✅ Hỗ trợ cả format cũ (array-only) và mới (object + array)
-
-### v1.0 (2026-06-00)
-- ✅ API đăng nhập/login
-- ✅ Điều khiển `LIGHT` và `FAN`
-- ✅ Lấy cấu hình thiết bị
-
-## Support
-
-Nếu gặp vấn đề:
-1. Kiểm tra Serial Monitor output
-2. Xem file `RELAY_CONTROL_TROUBLESHOOTING.md`
-3. Xem file `SERIAL_LOGGING_GUIDE.md`
-4. Gọi `/debug/clear-config` để reset config
+- Setup environment: `GUIDELINES/library-installation.md`
+- Hiểu flow init: `GUIDELINES/sensor-initialization.md`
+- Cấu hình device: `GUIDELINES/device-config-structure.md`
+- Debug SCD40: `GUIDELINES/scd40-sensor.md`
+- API overview: `API_DOCS/README.md`
+- Gọi API login: `API_DOCS/authentication.md`

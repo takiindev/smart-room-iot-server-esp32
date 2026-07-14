@@ -389,7 +389,7 @@ const BrandIrSender kBrandIrSenders[] = {
 ---
 
 **Xem thêm:**
-- [README.md](README.md) - Tổng quan hệ thống
-- [config.md](config.md) - API lấy và cập nhật config
-- [control.md](control.md) - API điều khiển thiết bị
-- [auth.md](auth.md) - API đăng nhập
+- [README.md](../README.md) - Tổng quan hệ thống
+- [config.md](../config.md) - API lấy và cập nhật config
+- [control.md](../control.md) - API điều khiển thiết bị
+- [auth.md](../auth.md) - API đăng nhập
