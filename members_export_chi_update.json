@@ -1,0 +1,162 @@
+{
+  "success": true,
+  "total": 30,
+  "filter": "update",
+  "selectedFields": [
+    "hoTen",
+    "vaiTro",
+    "khoa"
+  ],
+  "data": [
+    {
+      "hoTen": "Phạm Minh Quân",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Nguyễn Đăng Dương",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Nguyễn Trọng Nhân",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Nguyễn Hoàng Phúc",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Trần Phước Thành",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Tống Minh Duy",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Đinh Gia Phú",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Ngô Văn Quân",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Lý Anh Huy",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Trần Đăng Gia Bảo",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Lê Phạm Mỹ Hường",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Bùi Tấn Hưng",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Nguyễn Quốc Quỳnh",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Huỳnh Nguyễn Quỳnh Chi",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Tống Hoàng Phước Sang",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Diệp Đình Hiếu",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Lý Đặng Minh Kiên",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Bùi Công Tiển",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Nguyễn Bảo Trinh",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Lê Hồng Cường",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Nguyễn Trần Quốc Hào",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Lê Minh Khang",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Hoàng Dương Thanh",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Vũ Nhật Hào",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Huỳnh Phúc Lợi",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Nguyễn Văn Bảo",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Lê Khánh Đăng",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Huỳnh Thị Thúy Vy",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Nguyễn Thị Thảo Vy",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    },
+    {
+      "hoTen": "Mai Thị Yến Nhi",
+      "vaiTro": "Cộng tác viên",
+      "khoa": ""
+    }
+  ]
+}

@@ -44,37 +44,7 @@ Khi nào đọc: Khi cần setup environment, debug sensor, thêm device mới, 
 4. Gọi API: Đọc `API_DOCS/README.md` + file endpoint cụ thể
 5. Debug SCD40: Đọc `GUIDELINES/scd40-sensor.md`
 
-## Cấu trúc dự án
-
-## Cấu trúc dự án
-
-```
-SmartRoom-Client/
-├── SmartRoom-Client.ino                # Firmware chính
-├── config.json                         # Cấu hình thiết bị (device config)
-├── test_scd.md                         # Test code cho SCD40 sensor
-│
-└── smart-room-iot-server-esp32/        # Thư mục tài liệu
-    ├── README.md                       # (File này) Tổng quan & cấu trúc
-    │
-    ├── API_DOCS/                       # Hướng dẫn sử dụng API
-    │   ├── README.md                   # API overview
-    │   ├── authentication.md           # /auth/login
-    │   ├── temperature.md              # /temperature
-    │   ├── humidity.md                 # /humidity
-    │   ├── telemetry.md                # /telemetry
-    │   ├── control.md                  # /control
-    │   └── setup.md                    # /setup
-    │
-    └── GUIDELINES/                     # Hướng dẫn lập trình & kỹ thuật
-        ├── README.md                   # Overview + Quick start
-        ├── library-installation.md     # Cài đặt thư viện
-        ├── sensor-initialization.md    # Chiến lược init sensor
-        ├── device-config-structure.md  # Cấu trúc config JSON
-        └── scd40-sensor.md             # Hướng dẫn SCD40 kỹ thuật
-```
-
-## 🎯 Bắt đầu nhanh
+## Bắt đầu nhanh
 
 ### Cho lần đầu setup
 
@@ -82,7 +52,7 @@ SmartRoom-Client/
    - Cài ArduinoJson, IRremoteESP8266, DallasTemperature, **SensirionI2cScd4x**
 
 2. **Upload firmware:**
-   - Upload `SmartRoom-Client.ino` vào ESP32 Dev Module
+   - Upload `SmartRoom-Client.ino` vào ESP32 Dev Module hoặc khác tuỳ vào board bạn đang dùng
 
 3. **Cấu hình device:**
    - Sửa `config.json` theo hướng dẫn [`GUIDELINES/device-config-structure.md`](GUIDELINES/device-config-structure.md)

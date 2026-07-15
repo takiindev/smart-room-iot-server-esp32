@@ -17,43 +17,21 @@
 
 String config = R"rawliteral(
 {
-    "timeApi": "http://172.16.65.109:1234g/time",
+    "timeApi": "http://172.16.65.169:8081/api/v1/public/time",
     "roomCode": "R-VU",
     "I2C": {
         "SDA": 21,
         "SCL": 22
     },
     "devices": [
-         {
-            "naturalId": "HUM_ESP32_01",
-            "category": "HUMIDITY",
-            "specificType": "GPIO",
-            "controlType": "GPIO",
-            "gpioPin": [
-                21,22
-            ],
-            "translations": {
-                "vi": {
-                    "name": "Cảm biến độ ẩm A101 1",
-                    "description": "Cảm biến độ ẩm SHT40 phòng học A101 sử dụng chuẩn giao tiếp 1-Wire"
-                },
-                "en": {
-                    "name": "Humidity Sensor A101 1",
-                    "description": "SHT40 humidity sensor in room A101 using 1-Wire protocol"
-                }
-            },
-            "internal": {
-                "peripheralType": "SENSOR",
-                "module": "SCD40"
-            }
-        },
         {
             "naturalId": "TEMP_ESP32_02",
             "category": "TEMPERATURE",
             "specificType": "GPIO",
             "controlType": "GPIO",
             "gpioPin": [
-                21,22
+                21,
+                22
             ],
             "translations": {
                 "vi": {
@@ -155,7 +133,7 @@ String config = R"rawliteral(
             }
         },
         {
-            "naturalId": "LABAC1",
+            "naturalId": "ESP_LABAC1",
             "category": "AIR_CONDITION",
             "controlType": "GPIO",
             "specificType": "IR_SEND",
@@ -229,7 +207,7 @@ String config = R"rawliteral(
             "specificType": "GPIO",
             "controlType": "GPIO",
             "gpioPin": [
-                13
+                27
             ],
             "internal": {
                 "peripheralType": "RELAY"
@@ -273,6 +251,19 @@ IRsend *irsend = nullptr;                 // Pointer to IRsend object, initializ
 // SCD40 sensor - global object, initialized once
 SensirionI2cScd4x scd4x;
 bool isScd40Initialized = false;
+
+// SCD40 background task - cache latest sensor data
+struct SCD40CachedData {
+  float temperature = 0.0;
+  float humidity = 0.0;
+  uint16_t co2 = 0;
+  unsigned long lastReadTime = 0;
+  bool isValid = false;
+};
+SCD40CachedData scd40CachedData;
+int scd40CachedSdaPin = 21;
+int scd40CachedSclPin = 22;
+bool scd40BackgroundTaskRunning = false;
 
 char secret_key[] = "Vudeptrai@123";
 CustomJWT jwt(secret_key, 256);
@@ -358,8 +349,11 @@ void handleControl();
 void handleLogin();
 void handleGetTemperature();
 void handleGetHumidity();
+void handleGetCO2();
 void handleTelemetry();
 void initAllSensors();
+void scd40BackgroundTask(void *parameter);
+void startSCD40BackgroundTask();
 
 bool syncTimeFromApi(const String &timeApiUrl)
 {
@@ -1552,18 +1546,16 @@ void handleGetTemperature()
       return;
     }
 
-    int sdaPin = targetDevice["gpioPin"][0].as<int>();
-    int sclPin = targetDevice["gpioPin"][1].as<int>();
-    float temperature, humidity;
-
-    if (!readSCD40Data(sdaPin, sclPin, temperature, humidity))
+    // Use cached data from background task
+    if (!scd40CachedData.isValid)
     {
-      sendJson(500, "Lỗi: Không thể đọc dữ liệu từ cảm biến SCD40");
+      sendJson(500, "Lỗi: Dữ liệu SCD40 chưa sẵn sàng, vui lòng chờ");
       Serial.println("------------------------------------------");
       return;
     }
 
-    data["tempC"] = serialized(String(temperature, 3));
+    data["tempC"] = serialized(String(scd40CachedData.temperature, 3));
+    Serial.printf("[SCD40 CACHED] Using cached data: Temp=%.2f°C\n", scd40CachedData.temperature);
   }
   else
   {
@@ -1699,18 +1691,16 @@ void handleGetHumidity()
   }
   else if (module == "SCD40")
   {
-    int sdaPin = targetDevice["gpioPin"][0].as<int>();
-    int sclPin = targetDevice["gpioPin"][1].as<int>();
-    float temperature, humidity;
-
-    if (!readSCD40Data(sdaPin, sclPin, temperature, humidity))
+    // Use cached data from background task
+    if (!scd40CachedData.isValid)
     {
-      sendJson(500, "Lỗi: Không thể đọc dữ liệu từ cảm biến SCD40");
+      sendJson(500, "Lỗi: Dữ liệu SCD40 chưa sẵn sàng, vui lòng chờ");
       Serial.println("------------------------------------------");
       return;
     }
 
-    data["humidity"] = serialized(String(humidity, 2));
+    data["humidity"] = serialized(String(scd40CachedData.humidity, 2));
+    Serial.printf("[SCD40 CACHED] Using cached data: Humidity=%.2f%%\n", scd40CachedData.humidity);
   }
   else
   {
@@ -1721,6 +1711,136 @@ void handleGetHumidity()
   }
 
   sendJsonWithData(200, "Lấy độ ẩm thành công", data);
+  Serial.println("------------------------------------------");
+}
+
+void handleGetCO2()
+{
+  sendCORSHeaders();
+  Serial.println("------------------------------------------");
+  Serial.println("Endpoint:/co2");
+  Serial.println("[DEBUG] Request received!");
+
+  String token;
+  if (!requireBearerToken(token))
+  {
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  // Get naturalId from query parameter
+  String naturalId = "";
+  if (server.hasArg("naturalId"))
+  {
+    naturalId = server.arg("naturalId");
+    Serial.printf("[DEBUG] Query param naturalId found: %s\n", naturalId.c_str());
+  }
+  else
+  {
+    Serial.println("[DEBUG] Query param naturalId NOT found!");
+    Serial.printf("[DEBUG] Available args: %d\n", server.args());
+    for (uint8_t i = 0; i < server.args(); i++)
+    {
+      Serial.printf("[DEBUG] Arg %d: %s = %s\n", i, server.argName(i).c_str(), server.arg(i).c_str());
+    }
+  }
+
+  if (naturalId == "null" || naturalId.length() == 0)
+  {
+    sendJson(400, "Query parameter bắt buộc phải có: ?naturalId=...");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  Serial.printf("[REQUEST] naturalId: %s\n", naturalId.c_str());
+
+  JsonDocument configDoc;
+  if (deserializeJson(configDoc, config))
+  {
+    sendJson(500, "Lỗi thiết bị khi parse JSON");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonArrayConst devicesArray;
+  if (configDoc.containsKey("devices"))
+  {
+    devicesArray = configDoc["devices"].as<JsonArrayConst>();
+  }
+  else
+  {
+    sendJson(500, "Lỗi thiết bị khi parse JSON");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonObjectConst targetDevice;
+  bool deviceFound = false;
+  for (JsonObjectConst device : devicesArray)
+  {
+    String category = device["category"].as<String>();
+    if (category != "SENSOR_CO2")
+    {
+      continue;
+    }
+
+    if (device["naturalId"].as<String>() == naturalId)
+    {
+      targetDevice = device;
+      deviceFound = true;
+      Serial.printf("[DEVICE FOUND] naturalId: %s\n", naturalId.c_str());
+      break;
+    }
+  }
+
+  if (!deviceFound)
+  {
+    Serial.printf("[DEVICE NOT FOUND] naturalId: %s\n", naturalId.c_str());
+    sendJson(404, "Không tìm thấy cảm biến CO2 có naturalId tương ứng");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  if (!targetDevice.containsKey("internal") || !targetDevice["internal"].containsKey("module"))
+  {
+    sendJson(500, "Lỗi: Cảm biến thiếu thông tin module");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  String module = targetDevice["internal"]["module"].as<String>();
+
+  if (!targetDevice["gpioPin"].is<JsonArrayConst>() || targetDevice["gpioPin"].size() < 2)
+  {
+    sendJson(500, "Lỗi: SCD40 cần 2 GPIO pins (SDA, SCL)");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonDocument data;
+
+  if (module == "SCD40")
+  {
+    // Use cached data from background task
+    if (!scd40CachedData.isValid)
+    {
+      sendJson(500, "Lỗi: Dữ liệu SCD40 chưa sẵn sàng, vui lòng chờ");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    data["co2"] = scd40CachedData.co2;
+    Serial.printf("[SCD40 CACHED] Using cached data: CO2=%d ppm\n", scd40CachedData.co2);
+  }
+  else
+  {
+    Serial.printf("Lỗi: Module '%s' không hỗ trợ đo CO2\n", module.c_str());
+    sendJson(501, "Module cảm biến không hỗ trợ đo CO2");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  sendJsonWithData(200, "Lấy CO2 thành công", data);
   Serial.println("------------------------------------------");
 }
 
@@ -2296,10 +2416,16 @@ void handleTelemetry()
         continue;
       }
 
-      int sdaPin = device["gpioPin"][0].as<int>();
-      int sclPin = device["gpioPin"][1].as<int>();
-      float humidity;
-      readSuccess = readSCD40Data(sdaPin, sclPin, temperature, humidity);
+      // Use cached data from background task
+      if (!scd40CachedData.isValid)
+      {
+        Serial.printf("[TELEMETRY] Device %s: SCD40 cached data not ready\n", naturalId.c_str());
+        continue;
+      }
+
+      temperature = scd40CachedData.temperature;
+      readSuccess = true;
+      Serial.printf("[TELEMETRY] Device %s: Using cached SCD40 data\n", naturalId.c_str());
     }
     else
     {
@@ -2407,6 +2533,89 @@ void initAllSensors()
   Serial.println("========================================");
   Serial.println("[SENSOR INITIALIZATION] Hoàn tất");
   Serial.println("========================================\n");
+}
+
+// SCD40 Background Task - liên tục đọc data và cache
+void scd40BackgroundTask(void *parameter)
+{
+  Serial.println("[SCD40 BACKGROUND] Task started");
+  
+  while (scd40BackgroundTaskRunning)
+  {
+    if (isScd40Initialized)
+    {
+      // Đọc dữ liệu từ sensor
+      uint16_t error;
+      bool dataReady = false;
+      
+      error = scd4x.getDataReadyStatus(dataReady);
+      
+      if (error)
+      {
+        Serial.print("[SCD40 BACKGROUND] Data ready error: ");
+        Serial.println(error);
+        delay(1000);
+        continue;
+      }
+
+      if (!dataReady)
+      {
+        // Data chưa sẵn sàng, chờ 100ms rồi kiểm tra lại
+        delay(100);
+        continue;
+      }
+
+      // Đọc measurement
+      uint16_t co2;
+      float temperature, humidity;
+      error = scd4x.readMeasurement(co2, temperature, humidity);
+
+      if (error)
+      {
+        Serial.print("[SCD40 BACKGROUND] Read measurement error: ");
+        Serial.println(error);
+        delay(1000);
+        continue;
+      }
+
+      // Lưu data vào cache
+      scd40CachedData.co2 = co2;
+      scd40CachedData.temperature = temperature;
+      scd40CachedData.humidity = humidity;
+      scd40CachedData.lastReadTime = millis();
+      scd40CachedData.isValid = true;
+
+      Serial.printf("[SCD40 BACKGROUND] CO2: %u ppm, Temp: %.2f°C, Humidity: %.2f%%\n",
+                    co2, temperature, humidity);
+    }
+    
+    delay(1000);  // Đọc mỗi 1 giây
+  }
+  
+  Serial.println("[SCD40 BACKGROUND] Task ended");
+  vTaskDelete(NULL);
+}
+
+// Khởi động background task
+void startSCD40BackgroundTask()
+{
+  if (!scd40BackgroundTaskRunning && isScd40Initialized)
+  {
+    scd40BackgroundTaskRunning = true;
+    
+    // Tạo FreeRTOS task (priority 1, stack size 4096, core 1)
+    xTaskCreatePinnedToCore(
+      scd40BackgroundTask,           // Task function
+      "SCD40 Background",            // Task name
+      4096,                          // Stack size
+      NULL,                          // Parameters
+      1,                             // Priority
+      NULL,                          // Task handle
+      1                              // Core (1 = second core)
+    );
+    
+    Serial.println("[SCD40] Background task started successfully");
+  }
 }
 
 void setup()
@@ -2517,6 +2726,7 @@ void setup()
   server.on("/control", HTTP_POST, handleControl);
   server.on("/temperature", HTTP_GET, handleGetTemperature);
   server.on("/humidity", HTTP_GET, handleGetHumidity);
+  server.on("/co2", HTTP_GET, handleGetCO2);
   server.on("/setup", HTTP_GET, handleGetConfig);
   server.on("/telemetry", HTTP_GET, handleTelemetry);
 
@@ -2524,6 +2734,7 @@ void setup()
   server.on("/control", HTTP_OPTIONS, handleCORS);
   server.on("/temperature", HTTP_OPTIONS, handleCORS);
   server.on("/humidity", HTTP_OPTIONS, handleCORS);
+  server.on("/co2", HTTP_OPTIONS, handleCORS);
   server.on("/setup", HTTP_OPTIONS, handleCORS);
   server.on("/telemetry", HTTP_OPTIONS, handleCORS);
 
@@ -2576,6 +2787,9 @@ void setup()
 
   // Init sensors from config
   initAllSensors();
+  
+  // Start SCD40 background task
+  startSCD40BackgroundTask();
 }
 
 void loop()
