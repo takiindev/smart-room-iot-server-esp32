@@ -20,8 +20,8 @@ String config = R"rawliteral(
     "timeApi": "http://172.16.65.169:8081/api/v1/public/time",
     "roomCode": "R-VU",
     "I2C": {
-        "SDA": 21,
-        "SCL": 22
+        "SDA": 8,
+        "SCL": 9
     },
     "devices": [
         {
@@ -30,8 +30,8 @@ String config = R"rawliteral(
             "specificType": "GPIO",
             "controlType": "GPIO",
             "gpioPin": [
-                21,
-                22
+                8,
+                9
             ],
             "translations": {
                 "vi": {
@@ -54,7 +54,7 @@ String config = R"rawliteral(
             "specificType": "GPIO",
             "controlType": "GPIO",
             "gpioPin": [
-                4
+                10
             ],
             "translations": {
                 "vi": {
@@ -72,73 +72,12 @@ String config = R"rawliteral(
             }
         },
         {
-            "naturalId": "ESP_AC2_0022",
-            "category": "AIR_CONDITION",
-            "controlType": "GPIO",
-            "specificType": "IR_SEND",
-            "gpioPin": [
-                18
-            ],
-            "translations": {
-                "vi": {
-                    "name": "Máy lạnh COOLIX"
-                },
-                "en": {
-                    "name": "COOLIX Air Conditioner"
-                }
-            },
-            "internal": {
-                "peripheralType": "IR_SENDER",
-                "brand": "COOLIX",
-                "codeConfigs": {
-                    "bits": 24,
-                    "power": {
-                        "ON": "0xB2BF30",
-                        "OFF": "0xB27BE0"
-                    },
-                    "mode": {
-                        "COOL": "0xB2BF30",
-                        "HEAT": "0xB2BF2C",
-                        "AUTO": "0xB21F48",
-                        "FAN": "0xB2BFE4",
-                        "DRY": "0xB21F54"
-                    },
-                    "speed": {
-                        "1": "0xB29FB0",
-                        "2": "0xB25FB0",
-                        "3": "0xB23FB0"
-                    },
-                    "temperature": {
-                        "16": "0xB2BF00",
-                        "17": "0xB2BF00",
-                        "18": "0xB2BF10",
-                        "19": "0xB2BF30",
-                        "20": "0xB2BF20",
-                        "21": "0xB2BF60",
-                        "22": "0xB2BF70",
-                        "23": "0xB2BF50",
-                        "24": "0xB2BF40",
-                        "25": "0xB20BFC",
-                        "26": "0xB2BFD0",
-                        "27": "0xB2BF90",
-                        "28": "0xB2BF80",
-                        "29": "0xB2BFA0",
-                        "30": "0xB2BFB0"
-                    },
-                    "swing": {
-                        "ON": "0xB26BE0",
-                        "OFF": "0xB20FE0"
-                    }
-                }
-            }
-        },
-        {
             "naturalId": "ESP_LABAC1",
             "category": "AIR_CONDITION",
             "controlType": "GPIO",
             "specificType": "IR_SEND",
             "gpioPin": [
-                18
+                21
             ],
             "translations": {
                 "en": {
@@ -192,7 +131,7 @@ String config = R"rawliteral(
             }
         },
         {
-            "naturalId": "LIGHT_01",
+            "naturalId": "ESP_LIGHT_01",
             "category": "LIGHT",
             "translations": {
                 "vi": {
@@ -207,14 +146,14 @@ String config = R"rawliteral(
             "specificType": "GPIO",
             "controlType": "GPIO",
             "gpioPin": [
-                27
+                1
             ],
             "internal": {
                 "peripheralType": "RELAY"
             }
         },
         {
-            "naturalId": "Fan_01",
+            "naturalId": "ESP_FAN_01",
             "category": "FAN",
             "translations": {
                 "vi": {
@@ -229,9 +168,9 @@ String config = R"rawliteral(
             "specificType": "GPIO",
             "controlType": "GPIO",
             "gpioPin": [
-                14,
-                18,
-                19
+                2,
+                42,
+                41
             ],
             "internal": {
                 "peripheralType": "RELAY"
@@ -261,8 +200,8 @@ struct SCD40CachedData {
   bool isValid = false;
 };
 SCD40CachedData scd40CachedData;
-int scd40CachedSdaPin = 21;
-int scd40CachedSclPin = 22;
+int scd40CachedSdaPin = 8;
+int scd40CachedSclPin = 9;
 bool scd40BackgroundTaskRunning = false;
 
 char secret_key[] = "Vudeptrai@123";
