@@ -21,7 +21,7 @@ curl -X GET "http://172.16.64.200:8080/temperature?naturalId=TEMP_ESP32_01" \
 **Success (200 OK):**
 ```json
 {
-  "status": 200,
+  "code": 200,
   "message": "Lấy nhiệt độ thành công",
   "data": {
     "tempC": "25.500"
@@ -33,7 +33,7 @@ curl -X GET "http://172.16.64.200:8080/temperature?naturalId=TEMP_ESP32_01" \
 **Error (401 Unauthorized):**
 ```json
 {
-  "status": 401,
+  "code": 401,
   "message": "Token hết hạn hoặc không đúng",
   "timestamp": "2026-07-14T10:30:45Z"
 }
@@ -42,7 +42,7 @@ curl -X GET "http://172.16.64.200:8080/temperature?naturalId=TEMP_ESP32_01" \
 **Error (404 Not Found):**
 ```json
 {
-  "status": 404,
+  "code": 404,
   "message": "Không tìm thấy cảm biến nhiệt độ có naturalId tương ứng",
   "timestamp": "2026-07-14T10:30:45Z"
 }
@@ -51,7 +51,7 @@ curl -X GET "http://172.16.64.200:8080/temperature?naturalId=TEMP_ESP32_01" \
 **Error (500 Internal Server Error):**
 ```json
 {
-  "status": 500,
+  "code": 500,
   "message": "Lỗi: Không thể đọc dữ liệu từ cảm biến SCD40",
   "timestamp": "2026-07-14T10:30:45Z"
 }

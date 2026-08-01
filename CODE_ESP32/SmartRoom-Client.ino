@@ -12,13 +12,15 @@
 #include <Wire.h>
 #include <SensirionI2cScd4x.h>
 #include <SensirionCore.h>
+#include <BH1750.h>
+#include <math.h>
 
 // Không dùng Preferences nữa - config chỉ lưu trong RAM
 
 String config = R"rawliteral(
 {
-    "timeApi": "http://172.16.65.169:8081/api/v1/public/time",
-    "roomCode": "R-VU",
+    "timeApi": "http://172.16.57.136:8080/api/v1/public/time",
+    "roomCode": "R-RND",
     "I2C": {
         "SDA": 8,
         "SCL": 9
@@ -49,132 +51,77 @@ String config = R"rawliteral(
             }
         },
         {
-            "naturalId": "TEMP_ESP32_01",
-            "category": "TEMPERATURE",
-            "specificType": "GPIO",
-            "controlType": "GPIO",
-            "gpioPin": [
-                10
-            ],
-            "translations": {
-                "vi": {
-                    "name": "Cảm biến nhiệt độ A101 1",
-                    "description": "Cảm biến nhiệt độ DS18B20 phòng học A101 sử dụng chuẩn giao tiếp 1-Wire"
-                },
-                "en": {
-                    "name": "Temperature Sensor A101 1",
-                    "description": "DS18B20 temperature sensor in room A101 using 1-Wire protocol"
-                }
+          "naturalId": "CO2_ESP32_01",
+          "category": "SENSOR_CO2",
+          "specificType": "GPIO",
+          "controlType": "GPIO",
+          "gpioPin": [
+            8,
+            9
+          ],
+          "translations": {
+            "vi": {
+              "name": "Cảm biến CO2 phòng R&D",
+              "description": "Nồng độ CO2"
             },
-            "internal": {
-                "peripheralType": "SENSOR",
-                "module": "DS18B20"
+            "en": {
+              "name": "Room R&D CO2 sensor",
+              "description": "CO2 concentration"
             }
+          },
+          "internal": {
+            "peripheralType": "SENSOR",
+            "module": "SCD40"
+          }
         },
         {
-            "naturalId": "ESP_LABAC1",
-            "category": "AIR_CONDITION",
-            "controlType": "GPIO",
-            "specificType": "IR_SEND",
-            "gpioPin": [
-                21
-            ],
-            "translations": {
-                "en": {
-                    "name": "Lab AC 1"
-                },
-                "vi": {
-                    "name": "Máy lạnh phòng lab 1"
-                }
+          "naturalId": "HUM_ESP32_01",
+          "category": "HUMIDITY",
+          "specificType": "GPIO",
+          "controlType": "GPIO",
+          "gpioPin": [
+            8,
+            9
+          ],
+          "translations": {
+            "vi": {
+              "name": "Cảm biến độ ẩm phòng R&D",
+              "description": "Độ ẩm tương đối đo bằng cảm biến SCD40"
             },
-            "internal": {
-                "peripheralType": "IR_SENDER",
-                "brand": "LG",
-                "codeConfigs": {
-                    "power": {
-                        "ON": "0x8800F43",
-                        "OFF": "0x88C0051"
-                    },
-                    "mode": {
-                        "COOL": "0x8808F4B",
-                        "HEAT": "0x880C556",
-                        "DRY": "0x880910A",
-                        "FAN": "0x880A30D",
-                        "AUTO": "0x880B151"
-                    },
-                    "speed": {
-                        "1": "0x880A30D",
-                        "2": "0x880A32F",
-                        "3": "0x880A341"
-                    },
-                    "temperature": {
-                        "16": "0x880A14F",
-                        "17": "0x880A163",
-                        "18": "0x880A177",
-                        "19": "0x880A18B",
-                        "20": "0x880A19F",
-                        "21": "0x880A1B3",
-                        "22": "0x880A1C7",
-                        "23": "0x880A1DB",
-                        "24": "0x880A1EF",
-                        "25": "0x880A203",
-                        "26": "0x880A217",
-                        "27": "0x880A22B",
-                        "28": "0x880A23F",
-                        "29": "0x880A253",
-                        "30": "0x880A267"
-                    },
-                    "swing": {
-                        "ON": "0x8810001"
-                    }
-                }
+            "en": {
+              "name": "Room R&D humidity sensor",
+              "description": "Relative humidity measured by SCD40"
             }
+          },
+          "internal": {
+            "peripheralType": "SENSOR",
+            "module": "SCD40"
+          }
         },
         {
-            "naturalId": "ESP_LIGHT_01",
-            "category": "LIGHT",
-            "translations": {
-                "vi": {
-                    "name": "Đèn A101 1",
-                    "description": "Đèn số 01 của phòng lab A101"
-                },
-                "en": {
-                    "name": "Light A101 1",
-                    "description": "Light 01 of Lab A101"
-                }
+          "naturalId": "LUX_ESP32_01",
+          "category": "SENSOR_LUX",
+          "specificType": "GPIO",
+          "controlType": "GPIO",
+          "gpioPin": [
+            8,
+            9
+          ],
+          "translations": {
+            "vi": {
+              "name": "Cảm biến ánh sáng phòng R&D",
+              "description": "Cường độ ánh sáng đo bằng cảm biến BH1750"
             },
-            "specificType": "GPIO",
-            "controlType": "GPIO",
-            "gpioPin": [
-                1
-            ],
-            "internal": {
-                "peripheralType": "RELAY"
+            "en": {
+              "name": "Room R&D illuminance sensor",
+              "description": "Illuminance measured by BH1750"
             }
-        },
-        {
-            "naturalId": "ESP_FAN_01",
-            "category": "FAN",
-            "translations": {
-                "vi": {
-                    "name": "Quạt A101 1",
-                    "description": "Quạt số 01 của phòng lab A101"
-                },
-                "en": {
-                    "name": "Fan A101 1",
-                    "description": "Fan 01 of Lab A101"
-                }
-            },
-            "specificType": "GPIO",
-            "controlType": "GPIO",
-            "gpioPin": [
-                2,
-                42,
-                41
-            ],
-            "internal": {
-                "peripheralType": "RELAY"
-            }
+          },
+          "internal": {
+            "peripheralType": "SENSOR",
+            "module": "BH1750",
+            "i2cAddress": 35
+          }
         }
     ]
 }
@@ -184,7 +131,7 @@ int activeRelayPins[13];
 int activeRelayCount = 0;
 
 const int ledPin = 2;
-const uint8_t RELAY_INITIAL_STATE = HIGH; // Trạng thái ban đầu của relay: HIGH hoặc LOW
+const uint8_t RELAY_INITIAL_STATE = LOW; // Trạng thái ban đầu của relay: HIGH hoặc LOW
 IRsend *irsend = nullptr;                 // Pointer to IRsend object, initialized from config
 
 // SCD40 sensor - global object, initialized once
@@ -204,34 +151,36 @@ int scd40CachedSdaPin = 8;
 int scd40CachedSclPin = 9;
 bool scd40BackgroundTaskRunning = false;
 
-char secret_key[] = "Vudeptrai@123";
+// BH1750 sensor - dùng chung bus I2C với SCD40
+BH1750 bh1750;
+bool isBh1750Initialized = false;
+uint8_t bh1750I2cAddress = 0x23;
+
+struct BH1750CachedData
+{
+  float lux = 0.0f;
+  unsigned long lastReadTime = 0;
+  bool isValid = false;
+};
+
+BH1750CachedData bh1750CachedData;
+
+char secret_key[] = "ABC@123";
 CustomJWT jwt(secret_key, 256);
 
 const char *ssid = "A101CNTT";
 const char *password = "fit@123456789";
-IPAddress local_IP(172, 16, 65, 254);
+IPAddress local_IP(172, 16, 65, 250);
 IPAddress gateway(172, 16, 0, 1);
 IPAddress subnet(255, 255, 0, 0);
-
-// const char *ssid = "ThanhLoi";
-// const char *password = "bichloi123";
-// IPAddress local_IP(192, 168, 1, 200);
-// IPAddress gateway(192, 168, 1, 1);
-// IPAddress subnet(255, 255, 255, 0);
-
-// const char *ssid = "The Shark Villa";
-// const char *password = "249letrongtan";
-// IPAddress local_IP(192, 168, 1, 200);
-// IPAddress gateway(192, 168, 1, 1);
-// IPAddress subnet(255, 255, 252, 0);
 
 IPAddress primaryDNS(8, 8, 8, 8);
 IPAddress secondaryDNS(8, 8, 4, 4);
 
 WebServer server(8080);
 
-String serverUsername = "vuesp";
-String serverPassword = "123456789";
+String serverUsername = "rndesp32gateway";
+String serverPassword = "iuhrndesp32gateway";
 
 const char *headerKeys[] = {"Authorization", "Origin"};
 size_t headerKeysCount = sizeof(headerKeys) / sizeof(char *);
@@ -289,6 +238,7 @@ void handleLogin();
 void handleGetTemperature();
 void handleGetHumidity();
 void handleGetCO2();
+void handleGetLux();
 void handleTelemetry();
 void initAllSensors();
 void scd40BackgroundTask(void *parameter);
@@ -999,7 +949,7 @@ bool setTemperatureAC(const String &naturalId, int temp)
 void controlRelay(int gpioPin, bool state)
 {
   Serial.printf("[GPIO WRITE] Pin %d <- %d (%s)\n", gpioPin, state ? LOW : HIGH, state ? "LOW" : "HIGH");
-  digitalWrite(gpioPin, state ? LOW : HIGH);
+  digitalWrite(gpioPin, state ? HIGH : LOW);
   Serial.printf("[GPIO READ] Pin %d = %d\n", gpioPin, digitalRead(gpioPin));
 }
 
@@ -1638,7 +1588,8 @@ void handleGetHumidity()
       return;
     }
 
-    data["humidity"] = serialized(String(scd40CachedData.humidity, 2));
+    // data["humidity"] = serialized(String(scd40CachedData.humidity, 2));
+    data["humidity"] = scd40CachedData.humidity;
     Serial.printf("[SCD40 CACHED] Using cached data: Humidity=%.2f%%\n", scd40CachedData.humidity);
   }
   else
@@ -1780,6 +1731,95 @@ void handleGetCO2()
   }
 
   sendJsonWithData(200, "Lấy CO2 thành công", data);
+  Serial.println("------------------------------------------");
+}
+
+void handleGetLux()
+{
+  sendCORSHeaders();
+  Serial.println("------------------------------------------");
+  Serial.println("Endpoint:/lux");
+  Serial.println("[DEBUG] Request received!");
+
+  String token;
+  if (!requireBearerToken(token))
+  {
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  String naturalId = "";
+  if (server.hasArg("naturalId"))
+  {
+    naturalId = server.arg("naturalId");
+    Serial.printf("[DEBUG] Query param naturalId found: %s\n", naturalId.c_str());
+  }
+
+  if (naturalId == "null" || naturalId.length() == 0)
+  {
+    sendJson(400, "Query parameter bắt buộc phải có: ?naturalId=...");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonDocument configDoc;
+  if (deserializeJson(configDoc, config))
+  {
+    sendJson(500, "Lỗi thiết bị khi parse JSON");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonArrayConst devicesArray = configDoc["devices"].as<JsonArrayConst>();
+  JsonObjectConst targetDevice;
+  bool deviceFound = false;
+
+  for (JsonObjectConst device : devicesArray)
+  {
+    if (device["category"].as<String>() != "SENSOR_LUX")
+    {
+      continue;
+    }
+
+    if (device["naturalId"].as<String>() == naturalId)
+    {
+      targetDevice = device;
+      deviceFound = true;
+      break;
+    }
+  }
+
+  if (!deviceFound)
+  {
+    sendJson(404, "Không tìm thấy cảm biến ánh sáng có naturalId tương ứng");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  String module = targetDevice["internal"]["module"] | "";
+  if (module != "BH1750")
+  {
+    sendJson(501, "Module cảm biến không hỗ trợ đo Lux");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  if (!isBh1750Initialized || !bh1750CachedData.isValid)
+  {
+    sendJson(500, "Lỗi: Dữ liệu BH1750 chưa sẵn sàng, vui lòng chờ");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonDocument data;
+  data["lux"] = bh1750CachedData.lux;
+
+  Serial.printf(
+      "[BH1750 CACHED] Using cached data: Lux=%.2f lx\n",
+      bh1750CachedData.lux
+  );
+
+  sendJsonWithData(200, "Lấy cường độ ánh sáng thành công", data);
   Serial.println("------------------------------------------");
 }
 
@@ -2295,18 +2335,103 @@ void handleTelemetry()
 
   JsonArray devicesArray_out = responseData.createNestedArray("devices");
 
-  bool hasTemperatureDevices = false;
   for (JsonObjectConst device : devicesArray)
   {
     String category = device["category"].as<String>();
+    String naturalId = device["naturalId"].as<String>();
+
+    if (category == "SENSOR_CO2")
+    {
+        if (!scd40CachedData.isValid)
+        {
+            Serial.printf(
+                "[TELEMETRY] CO2 device %s: cached data not ready\n",
+                naturalId.c_str()
+            );
+            continue;
+        }
+
+        JsonObject deviceItem = devicesArray_out.createNestedObject();
+        deviceItem["naturalId"] = naturalId;
+        deviceItem["category"] = "SENSOR_CO2";
+
+        JsonObject dataObj = deviceItem.createNestedObject("data");
+        dataObj["co2"] = scd40CachedData.co2;
+
+        Serial.printf(
+            "[TELEMETRY] Device %s: CO2 = %u ppm\n",
+            naturalId.c_str(),
+            scd40CachedData.co2
+        );
+
+        continue;
+    }
+
+    if (category == "HUMIDITY")
+    {
+      if (!scd40CachedData.isValid)
+      {
+        Serial.printf(
+            "[TELEMETRY] Humidity device %s: cached data not ready\n",
+            naturalId.c_str()
+        );
+        continue;
+      }
+
+      JsonObject deviceItem =
+          devicesArray_out.createNestedObject();
+
+      deviceItem["naturalId"] = naturalId;
+      deviceItem["category"] = "HUMIDITY";
+
+      JsonObject dataObj =
+          deviceItem.createNestedObject("data");
+
+      // Gửi dưới dạng số thực
+      dataObj["humidity"] = scd40CachedData.humidity;
+
+      Serial.printf(
+          "[TELEMETRY] Device %s: humidity = %.2f %%RH\n",
+          naturalId.c_str(),
+          scd40CachedData.humidity
+      );
+
+      continue;
+    }
+
+    if (category == "SENSOR_LUX")
+    {
+      if (!isBh1750Initialized || !bh1750CachedData.isValid)
+      {
+        Serial.printf(
+            "[TELEMETRY] Lux device %s: cached data not ready\n",
+            naturalId.c_str()
+        );
+        continue;
+      }
+
+      JsonObject deviceItem = devicesArray_out.createNestedObject();
+      deviceItem["naturalId"] = naturalId;
+      deviceItem["category"] = "SENSOR_LUX";
+
+      JsonObject dataObj = deviceItem.createNestedObject("data");
+      dataObj["lux"] = bh1750CachedData.lux;
+
+      Serial.printf(
+          "[TELEMETRY] Device %s: lux = %.2f lx\n",
+          naturalId.c_str(),
+          bh1750CachedData.lux
+      );
+
+      continue;
+    }
+
     if (category != "TEMPERATURE")
     {
       continue;
     }
 
-    hasTemperatureDevices = true;
-
-    String naturalId = device["naturalId"].as<String>();
+    // String naturalId = device["naturalId"].as<String>();
     Serial.printf("[TELEMETRY] Processing device: %s\n", naturalId.c_str());
 
     // Check if device has internal.module
@@ -2419,8 +2544,8 @@ void initAllSensors()
 
   // Scan config để init SCD40 sensors
   bool hasSCD40 = false;
-  int scd40SdaPin = 21;
-  int scd40SclPin = 22;
+  int scd40SdaPin = 8;
+  int scd40SclPin = 9;
 
   for (JsonObjectConst device : devicesArray)
   {
@@ -2469,6 +2594,75 @@ void initAllSensors()
     }
   }
 
+  // Scan config và khởi tạo BH1750
+  for (JsonObjectConst device : devicesArray)
+  {
+    if (!device.containsKey("internal") ||
+        device["internal"]["module"].as<String>() != "BH1750")
+    {
+      continue;
+    }
+
+    int bh1750SdaPin = configDoc["I2C"]["SDA"] | 8;
+    int bh1750SclPin = configDoc["I2C"]["SCL"] | 9;
+    bh1750I2cAddress = static_cast<uint8_t>(
+        device["internal"]["i2cAddress"] | 0x23
+    );
+
+    // Nếu không có SCD40, BH1750 chịu trách nhiệm khởi tạo bus I2C.
+    // Nếu có SCD40, Wire đã được khởi tạo trong readSCD40Data().
+    if (!hasSCD40)
+    {
+      Wire.begin(bh1750SdaPin, bh1750SclPin);
+    }
+
+    Serial.printf(
+        "[SENSOR INIT] Initializing BH1750: %s "
+        "(SDA=%d, SCL=%d, address=0x%02X)\n",
+        device["naturalId"].as<const char *>(),
+        bh1750SdaPin,
+        bh1750SclPin,
+        bh1750I2cAddress
+    );
+
+    isBh1750Initialized = bh1750.begin(
+        BH1750::CONTINUOUS_HIGH_RES_MODE,
+        bh1750I2cAddress,
+        &Wire
+    );
+
+    if (!isBh1750Initialized)
+    {
+      Serial.println("[SENSOR INIT] BH1750 initialization failed!");
+      break;
+    }
+
+    // High-resolution mode cần thời gian đo đầu tiên.
+    delay(200);
+
+    float lux = bh1750.readLightLevel();
+    if (lux >= 0.0f && isfinite(lux))
+    {
+      bh1750CachedData.lux = lux;
+      bh1750CachedData.lastReadTime = millis();
+      bh1750CachedData.isValid = true;
+
+      Serial.printf(
+          "[SENSOR INIT] BH1750 initialized successfully: %.2f lx\n",
+          lux
+      );
+    }
+    else
+    {
+      Serial.printf(
+          "[SENSOR INIT] BH1750 initialized but first reading is invalid: %.2f\n",
+          lux
+      );
+    }
+
+    break; // Chỉ dùng một BH1750 trên board này
+  }
+
   Serial.println("========================================");
   Serial.println("[SENSOR INITIALIZATION] Hoàn tất");
   Serial.println("========================================\n");
@@ -2477,68 +2671,92 @@ void initAllSensors()
 // SCD40 Background Task - liên tục đọc data và cache
 void scd40BackgroundTask(void *parameter)
 {
-  Serial.println("[SCD40 BACKGROUND] Task started");
-  
+  Serial.println("[SENSOR BACKGROUND] Task started");
+
   while (scd40BackgroundTaskRunning)
   {
+    // Đọc SCD40 nếu đã khởi tạo
     if (isScd40Initialized)
     {
-      // Đọc dữ liệu từ sensor
       uint16_t error;
       bool dataReady = false;
-      
+
       error = scd4x.getDataReadyStatus(dataReady);
-      
+
       if (error)
       {
         Serial.print("[SCD40 BACKGROUND] Data ready error: ");
         Serial.println(error);
-        delay(1000);
-        continue;
       }
-
-      if (!dataReady)
+      else if (dataReady)
       {
-        // Data chưa sẵn sàng, chờ 100ms rồi kiểm tra lại
-        delay(100);
-        continue;
+        uint16_t co2;
+        float temperature;
+        float humidity;
+
+        error = scd4x.readMeasurement(co2, temperature, humidity);
+
+        if (error)
+        {
+          Serial.print("[SCD40 BACKGROUND] Read measurement error: ");
+          Serial.println(error);
+        }
+        else
+        {
+          scd40CachedData.co2 = co2;
+          scd40CachedData.temperature = temperature;
+          scd40CachedData.humidity = humidity;
+          scd40CachedData.lastReadTime = millis();
+          scd40CachedData.isValid = true;
+
+          Serial.printf(
+              "[SCD40 BACKGROUND] CO2: %u ppm, "
+              "Temp: %.2f°C, Humidity: %.2f%%\n",
+              co2,
+              temperature,
+              humidity
+          );
+        }
       }
-
-      // Đọc measurement
-      uint16_t co2;
-      float temperature, humidity;
-      error = scd4x.readMeasurement(co2, temperature, humidity);
-
-      if (error)
-      {
-        Serial.print("[SCD40 BACKGROUND] Read measurement error: ");
-        Serial.println(error);
-        delay(1000);
-        continue;
-      }
-
-      // Lưu data vào cache
-      scd40CachedData.co2 = co2;
-      scd40CachedData.temperature = temperature;
-      scd40CachedData.humidity = humidity;
-      scd40CachedData.lastReadTime = millis();
-      scd40CachedData.isValid = true;
-
-      Serial.printf("[SCD40 BACKGROUND] CO2: %u ppm, Temp: %.2f°C, Humidity: %.2f%%\n",
-                    co2, temperature, humidity);
     }
-    
-    delay(1000);  // Đọc mỗi 1 giây
+
+    // Đọc BH1750 tuần tự trên cùng bus I2C
+    if (isBh1750Initialized)
+    {
+      float lux = bh1750.readLightLevel();
+
+      if (lux >= 0.0f && isfinite(lux))
+      {
+        bh1750CachedData.lux = lux;
+        bh1750CachedData.lastReadTime = millis();
+        bh1750CachedData.isValid = true;
+
+        Serial.printf(
+            "[BH1750 BACKGROUND] Lux: %.2f lx\n",
+            lux
+        );
+      }
+      else
+      {
+        Serial.printf(
+            "[BH1750 BACKGROUND] Invalid reading: %.2f\n",
+            lux
+        );
+      }
+    }
+
+    delay(30000); // Cập nhật cache mỗi 30 giây
   }
-  
-  Serial.println("[SCD40 BACKGROUND] Task ended");
+
+  Serial.println("[SENSOR BACKGROUND] Task ended");
   vTaskDelete(NULL);
 }
 
 // Khởi động background task
 void startSCD40BackgroundTask()
 {
-  if (!scd40BackgroundTaskRunning && isScd40Initialized)
+  if (!scd40BackgroundTaskRunning &&
+      (isScd40Initialized || isBh1750Initialized))
   {
     scd40BackgroundTaskRunning = true;
     
@@ -2553,7 +2771,7 @@ void startSCD40BackgroundTask()
       1                              // Core (1 = second core)
     );
     
-    Serial.println("[SCD40] Background task started successfully");
+    Serial.println("[SENSOR] Background task started successfully");
   }
 }
 
@@ -2578,7 +2796,7 @@ void setup()
   int timeout_counter = 0;
   while (WiFi.status() != WL_CONNECTED)
   {
-    delay(500);
+    delay(1000);
     Serial.print(".");
     timeout_counter++;
 
@@ -2666,6 +2884,7 @@ void setup()
   server.on("/temperature", HTTP_GET, handleGetTemperature);
   server.on("/humidity", HTTP_GET, handleGetHumidity);
   server.on("/co2", HTTP_GET, handleGetCO2);
+  server.on("/lux", HTTP_GET, handleGetLux);
   server.on("/setup", HTTP_GET, handleGetConfig);
   server.on("/telemetry", HTTP_GET, handleTelemetry);
 
@@ -2674,6 +2893,7 @@ void setup()
   server.on("/temperature", HTTP_OPTIONS, handleCORS);
   server.on("/humidity", HTTP_OPTIONS, handleCORS);
   server.on("/co2", HTTP_OPTIONS, handleCORS);
+  server.on("/lux", HTTP_OPTIONS, handleCORS);
   server.on("/setup", HTTP_OPTIONS, handleCORS);
   server.on("/telemetry", HTTP_OPTIONS, handleCORS);
 

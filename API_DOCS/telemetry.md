@@ -1,8 +1,8 @@
 # Telemetry API
 
-## GET `/telemetry` - Lấy dữ liệu cảm biến từ tất cả các thiết bị
+## GET `/telemetry` - Get sensor data from all configured devices
 
-API này dùng để lấy dữ liệu từ tất cả các cảm biến nhiệt độ được cấu hình trong hệ thống.
+This endpoint retrieves telemetry data from all configured sensors including temperature, humidity, CO2, and light intensity.
 
 ### Request
 
@@ -16,8 +16,8 @@ curl -X GET "http://172.16.64.200:8080/telemetry" \
 **Success (200 OK):**
 ```json
 {
-  "status": 200,
-  "message": "Lấy dữ liệu telemetry thành công",
+  "code": 200,
+  "message": "Success",
   "data": {
     "roomCode": "R-VU",
     "devices": [
@@ -27,54 +27,69 @@ curl -X GET "http://172.16.64.200:8080/telemetry" \
         "tempC": "25.500"
       },
       {
-        "naturalId": "HUM_ESP32_01",
-        "category": "HUMIDITY",
-        "humidity": "45.200"
-      },
-      {
         "naturalId": "TEMP_ESP32_02",
         "category": "TEMPERATURE",
         "tempC": "26.300"
+      },
+      {
+        "naturalId": "HUM_ESP32_01",
+        "category": "HUMIDITY",
+        "humidity": "45.20"
+      },
+      {
+        "naturalId": "ESP32_CO2_01",
+        "category": "SENSOR_CO2",
+        "co2": "425"
+      },
+      {
+        "naturalId": "ESP32_LIGHT_01",
+        "category": "SENSOR_LUX",
+        "lux": "350.50"
       }
     ]
   },
-  "timestamp": "2026-07-14T10:30:45Z"
+  "timestamp": "2026-07-15T10:30:45Z"
 }
 ```
 
 **Error (401 Unauthorized):**
 ```json
 {
-  "status": 401,
-  "message": "Token hết hạn hoặc không đúng",
-  "timestamp": "2026-07-14T10:30:45Z"
+  "code": 401,
+  "message": "Token expired or invalid",
+  "timestamp": "2026-07-15T10:30:45Z"
 }
 ```
 
 ### Response Fields
 
-| Tên trường | Loại | Mô tả |
-|-----------|------|-------|
-| roomCode | string | Mã phòng từ config |
-| devices | array | Mảng các cảm biến |
-| devices[].naturalId | string | Định danh thiết bị |
-| devices[].category | string | Loại sensor (TEMPERATURE, HUMIDITY) |
-| devices[].tempC | string | Giá trị nhiệt độ (chỉ có nếu category là TEMPERATURE) |
-| devices[].humidity | string | Giá trị độ ẩm (chỉ có nếu category là HUMIDITY) |
+| Field | Type | Description |
+|-------|------|-------------|
+| roomCode | string | Room code from config |
+| devices | array | Array of sensor readings |
+| devices[].naturalId | string | Unique device identifier |
+| devices[].category | string | Sensor type (TEMPERATURE, HUMIDITY, SENSOR_CO2, SENSOR_LUX) |
+| devices[].tempC | string | Temperature value in Celsius (TEMPERATURE only) |
+| devices[].humidity | string | Humidity value in percentage (HUMIDITY only) |
+| devices[].co2 | string | CO2 concentration in ppm (SENSOR_CO2 only) |
+| devices[].lux | string | Light intensity in lux (SENSOR_LUX only) |
 
-### Chú ý
+### Supported Sensors
 
-- Endpoint này quét tất cả devices có `category: "TEMPERATURE"` hoặc `category: "HUMIDITY"` trong config
-- Nếu không thể đọc dữ liệu từ cảm biến nào, device đó sẽ **bị bỏ qua** trong response (không trả về lỗi)
-- Token phải được gửi trong header `Authorization: Bearer <token>`
-- Thời gian response phụ thuộc vào số lượng cảm biến và trạng thái của chúng
+- TEMPERATURE: DS18B20, SCD40, SHT40
+- HUMIDITY: SCD40, SHT40
+- SENSOR_CO2: SCD40
+- SENSOR_LUX: BH1750FVI
 
-### Cảm biến được hỗ trợ
+### Notes
 
-- TEMPERATURE: DS18B20, SCD40
-- HUMIDITY: SCD40
+- Endpoint scans all devices in config by sensor category
+- Devices that fail to read are skipped (not included in response)
+- SCD40 data comes from background cache task (no blocking wait)
+- LUX sensor initializes fresh on each request
+- Bearer token is required in Authorization header
 
-### Ví dụ sử dụng
+### Usage Examples
 
 **JavaScript/Fetch:**
 ```javascript
@@ -88,11 +103,7 @@ const response = await fetch('http://172.16.64.200:8080/telemetry', {
 const data = await response.json();
 console.log('Room:', data.data.roomCode);
 data.data.devices.forEach(device => {
-  if (device.category === 'TEMPERATURE') {
-    console.log(`${device.naturalId}: ${device.tempC}°C`);
-  } else if (device.category === 'HUMIDITY') {
-    console.log(`${device.naturalId}: ${device.humidity}% RH`);
-  }
+  console.log(`${device.naturalId} (${device.category}):`, device);
 });
 ```
 
@@ -113,10 +124,13 @@ data = response.json()
 if response.status_code == 200:
     print(f"Room: {data['data']['roomCode']}")
     for device in data['data']['devices']:
-        if device['category'] == 'TEMPERATURE':
-            print(f"{device['naturalId']}: {device['tempC']}°C")
-        elif device['category'] == 'HUMIDITY':
-            print(f"{device['naturalId']}: {device['humidity']}% RH")
+        print(f"{device['naturalId']}: {device}")
 else:
     print(f"Error: {data['message']}")
 ```
+
+### Error Handling
+
+- 401: Invalid or expired token
+- 500: JSON parse error or configuration issue
+- Device read failures are logged but do not cause endpoint failure

@@ -24,7 +24,7 @@ curl -X POST "http://172.16.64.200:8080/auth/login" \
 **Success (200 OK):**
 ```json
 {
-  "status": 200,
+  "code": 200,
   "message": "Đăng nhập thành công",
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InZ1ZXNwIiwicm9sZSI6InN1cGVyX3VzZXIiLCJleHAiOjE2MjY0MjU5OTl9.xxx"
@@ -36,7 +36,7 @@ curl -X POST "http://172.16.64.200:8080/auth/login" \
 **Error (400 Bad Request):**
 ```json
 {
-  "status": 400,
+  "code": 400,
   "message": "Thiếu body request hoặc body không đúng định dạng",
   "timestamp": "2026-07-14T10:30:45Z"
 }
@@ -45,7 +45,7 @@ curl -X POST "http://172.16.64.200:8080/auth/login" \
 **Error (401 Unauthorized):**
 ```json
 {
-  "status": 401,
+  "code": 401,
   "message": "username hoặc password không đúng",
   "timestamp": "2026-07-14T10:30:45Z"
 }
@@ -54,7 +54,7 @@ curl -X POST "http://172.16.64.200:8080/auth/login" \
 **Error (500 Internal Server Error):**
 ```json
 {
-  "status": 500,
+  "code": 500,
   "message": "Server chưa đồng bộ xong thời gian",
   "timestamp": "2026-07-14T10:30:45Z"
 }

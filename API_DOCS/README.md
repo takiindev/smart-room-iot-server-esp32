@@ -14,6 +14,12 @@ Tài liệu API cho SmartRoom ESP32 Client.
   
 - **[Humidity](./humidity.md)** - Đọc dữ liệu độ ẩm
   - `GET /humidity?naturalId=...` - Lấy dữ liệu từ cảm biến độ ẩm
+
+- **[CO2](./co2.md)** - Đọc dữ liệu CO2
+  - `GET /co2?naturalId=...` - Lấy dữ liệu từ cảm biến CO2
+
+- **[LUX](./lux.md)** - Đọc dữ liệu ánh sáng
+  - `GET /lux?naturalId=...` - Lấy dữ liệu từ cảm biến ánh sáng
   
 - **[Telemetry](./telemetry.md)** - Lấy dữ liệu từ tất cả cảm biến
   - `GET /telemetry` - Lấy dữ liệu từ tất cả thiết bị cảm biến
@@ -37,7 +43,7 @@ Tài liệu API cho SmartRoom ESP32 Client.
 Tất cả response đều theo format:
 ```json
 {
-  "status": 200,
+  "code": 200,
   "message": "Success message",
   "data": { /* data object */ },
   "timestamp": "2026-07-14T10:30:45Z"
@@ -45,14 +51,14 @@ Tất cả response đều theo format:
 ```
 
 ### Query Parameters vs Body
-- Sensor API (temperature, humidity, telemetry) dùng **query parameters** (GET)
+- Sensor API (temperature, humidity, co2, lux, telemetry) dùng **query parameters** (GET)
 - Control API dùng **request body** (POST)
 - Setup API dùng **GET** (không body)
 
 ## Error Status Codes
 
-| Status | Ý nghĩa |
-|--------|---------|
+| Code | Ý nghĩa |
+|------|---------|
 | 200 | OK - Thành công |
 | 400 | Bad Request - Lỗi input |
 | 401 | Unauthorized - Token không hợp lệ |
@@ -67,6 +73,8 @@ Tất cả response đều theo format:
 | Temperature | DS18B20 | 1-Wire | Phạm vi: -55 đến 125°C |
 | Temperature | SCD40 | I2C | Phạm vi: -40 đến 85°C |
 | Humidity | SCD40 | I2C | Phạm vi: 0-100% RH |
+| CO2 | SCD40 | I2C | Phạm vi: 0-40000 ppm |
+| Light | BH1750FVI | I2C | Phạm vi: 1-65535 lux |
 
 ## Thiết bị điều khiển được hỗ trợ
 
@@ -117,6 +125,8 @@ curl -X POST http://172.16.64.200:8080/control \
 /auth/login                     (POST)   - Đăng nhập
 /temperature                   (GET)    - Lấy nhiệt độ
 /humidity                      (GET)    - Lấy độ ẩm
+/co2                           (GET)    - Lấy CO2
+/lux                           (GET)    - Lấy ánh sáng
 /telemetry                     (GET)    - Lấy dữ liệu toàn hệ thống
 /control                       (POST)   - Điều khiển thiết bị
 /setup                         (GET)    - Lấy cấu hình
@@ -129,9 +139,9 @@ Device config được lưu trong `config` string trong firmware. Mỗi device c
 ```json
 {
   "naturalId": "unique identifier",
-  "category": "TEMPERATURE|HUMIDITY|LIGHT|FAN|AIR_CONDITION",
+  "category": "TEMPERATURE|HUMIDITY|SENSOR_CO2|SENSOR_LUX|LIGHT|FAN|AIR_CONDITION",
   "internal": {
-    "module": "DS18B20|SCD40|...",
+    "module": "DS18B20|SCD40|BH1750FVI|...",
     "peripheralType": "SENSOR|IR_SENDER|..."
   },
   "gpioPin": [pin numbers]

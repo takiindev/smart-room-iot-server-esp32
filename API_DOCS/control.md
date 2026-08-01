@@ -31,7 +31,7 @@ curl -X POST "http://172.16.64.200:8080/control" \
 **Success (200 OK):**
 ```json
 {
-  "status": 200,
+  "code": 200,
   "message": "Điều khiển thành công",
   "timestamp": "2026-07-14T10:30:45Z"
 }
@@ -40,7 +40,7 @@ curl -X POST "http://172.16.64.200:8080/control" \
 **Error (400 Bad Request):**
 ```json
 {
-  "status": 400,
+  "code": 400,
   "message": "Body bắt buộc phải có các trường: naturalId, category",
   "timestamp": "2026-07-14T10:30:45Z"
 }
@@ -49,7 +49,7 @@ curl -X POST "http://172.16.64.200:8080/control" \
 **Error (401 Unauthorized):**
 ```json
 {
-  "status": 401,
+  "code": 401,
   "message": "Token hết hạn hoặc không đúng",
   "timestamp": "2026-07-14T10:30:45Z"
 }
@@ -58,7 +58,7 @@ curl -X POST "http://172.16.64.200:8080/control" \
 **Error (404 Not Found):**
 ```json
 {
-  "status": 404,
+  "code": 404,
   "message": "Không tìm thấy thiết bị có naturalId tương ứng",
   "timestamp": "2026-07-14T10:30:45Z"
 }

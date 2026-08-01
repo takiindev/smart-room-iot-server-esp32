@@ -26,7 +26,7 @@ GET /co2?naturalId={naturalId}
   "code": 200,
   "message": "Lay CO2 thanh cong",
   "data": {
-    "co2": 425
+    "co2": "425"
   }
 }
 ```

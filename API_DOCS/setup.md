@@ -16,7 +16,7 @@ curl -X GET "http://172.16.64.200:8080/setup" \
 **Success (200 OK):**
 ```json
 {
-  "status": 200,
+  "code": 200,
   "message": "Lấy JSON cấu hình thiết bị thành công",
   "data": {
     "timeApi": "http://172.16.64.195:1234/time",
@@ -67,7 +67,7 @@ curl -X GET "http://172.16.64.200:8080/setup" \
 **Error (401 Unauthorized):**
 ```json
 {
-  "status": 401,
+  "code": 401,
   "message": "Token hết hạn hoặc không đúng",
   "timestamp": "2026-07-14T10:30:45Z"
 }
@@ -76,7 +76,7 @@ curl -X GET "http://172.16.64.200:8080/setup" \
 **Error (500 Internal Server Error):**
 ```json
 {
-  "status": 500,
+  "code": 500,
   "message": "Lỗi thiết bị khi parse JSON",
   "timestamp": "2026-07-14T10:30:45Z"
 }
