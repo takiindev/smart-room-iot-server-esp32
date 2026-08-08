@@ -6,6 +6,7 @@
 #include <Arduino.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
+#include <IRutils.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <HTTPClient.h>
@@ -13,118 +14,131 @@
 #include <SensirionI2cScd4x.h>
 #include <SensirionCore.h>
 #include <BH1750.h>
+#include <PZEM004Tv30.h>
 #include <math.h>
 
 // Không dùng Preferences nữa - config chỉ lưu trong RAM
 
 String config = R"rawliteral(
 {
-    "timeApi": "http://172.16.57.136:8080/api/v1/public/time",
-    "roomCode": "R-RND",
-    "I2C": {
-        "SDA": 8,
-        "SCL": 9
+  "timeApi": "http://172.16.64.211:8081/api/v1/public/time",
+  "roomCode": "R-VU",
+  "I2C": {
+    "SDA": 8,
+    "SCL": 9
+  },
+  "devices": [
+    {
+      "naturalId": "ESP_POWER_001",
+      "category": "POWER_CONSUMPTION",
+      "specificType": "PZEM",
+      "controlType": "GPIO",
+      "gpioPin": [
+        16,
+        17
+      ],
+      "translations": {
+        "vi": {
+          "name": "PZEM ",
+          "description": "PZEM"
+        },
+        "en": {
+          "name": "PZEM",
+          "description": "PZEM"
+        }
+      }
     },
-    "devices": [
-        {
-            "naturalId": "TEMP_ESP32_02",
-            "category": "TEMPERATURE",
-            "specificType": "GPIO",
-            "controlType": "GPIO",
-            "gpioPin": [
-                8,
-                9
-            ],
-            "translations": {
-                "vi": {
-                    "name": "Cảm biến nhiệt độ A101 2",
-                    "description": "Cảm biến nhiệt độ SHT40 phòng học A101 sử dụng chuẩn giao tiếp I2C"
-                },
-                "en": {
-                    "name": "Temperature Sensor A101 2",
-                    "description": "SHT40 temperature sensor in room A101 using I2C protocol"
-                }
-            },
-            "internal": {
-                "peripheralType": "SENSOR",
-                "module": "SCD40"
-            }
+    {
+      "naturalId": "ESP_FAN_01",
+      "category": "FAN",
+      "specificType": "GPIO",
+      "controlType": "GPIO",
+      "gpioPin": [
+        14,
+        16,
+        17
+      ],
+      "translations": {
+        "vi": {
+          "name": "Quạt phòng Lab",
+          "description": "Quạt 3 tốc độ điều khiển bằng relay"
         },
-        {
-          "naturalId": "CO2_ESP32_01",
-          "category": "SENSOR_CO2",
-          "specificType": "GPIO",
-          "controlType": "GPIO",
-          "gpioPin": [
-            8,
-            9
-          ],
-          "translations": {
-            "vi": {
-              "name": "Cảm biến CO2 phòng R&D",
-              "description": "Nồng độ CO2"
-            },
-            "en": {
-              "name": "Room R&D CO2 sensor",
-              "description": "CO2 concentration"
-            }
-          },
-          "internal": {
-            "peripheralType": "SENSOR",
-            "module": "SCD40"
-          }
+        "en": {
+          "name": "Lab Fan",
+          "description": "3-speed fan controlled by relay"
+        }
+      },
+      "consumption": {
+        "power": {
+          "gpioPin": [16, 17]
+        }
+      },
+      "internal": {
+        "peripheralType": "RELAY"
+      }
+    },
+    {
+      "naturalId": "ESP_AC_01",
+      "category": "AIR_CONDITION",
+      "specificType": "IR_SEND",
+      "controlType": "GPIO",
+      "gpioPin": [4],
+      "translations": {
+        "vi": {
+          "name": "Máy lạnh phòng Lab 2",
+          "description": "Máy lạnh Samsung điều khiển bằng IR"
         },
-        {
-          "naturalId": "HUM_ESP32_01",
-          "category": "HUMIDITY",
-          "specificType": "GPIO",
-          "controlType": "GPIO",
-          "gpioPin": [
-            8,
-            9
-          ],
-          "translations": {
-            "vi": {
-              "name": "Cảm biến độ ẩm phòng R&D",
-              "description": "Độ ẩm tương đối đo bằng cảm biến SCD40"
-            },
-            "en": {
-              "name": "Room R&D humidity sensor",
-              "description": "Relative humidity measured by SCD40"
-            }
+        "en": {
+          "name": "Lab 2 Air Conditioner",
+          "description": "Samsung AC controlled via IR"
+        }
+      },
+      "internal": {
+        "peripheralType": "IR_SENDER",
+        "irCodes": {
+          "power": {
+            "OFF": "8220, 4010, 486, 1512, 540, 460, 510, 488, 540, 460, 486, 1514, 510, 490, 540, 456, 540, 458, 484, 1514, 514, 1484, 540, 460, 510, 488, 510, 488, 512, 488, 538, 458, 512, 486, 512, 486, 512, 488, 540, 458, 540, 458, 512, 488, 484, 1514, 540, 456, 514, 1482, 514, 486, 540, 458, 542, 458, 514, 1484, 486",
+            "ON": "8192, 4038, 486, 1512, 542, 454, 544, 456, 542, 456, 516, 1482, 570, 430, 568, 432, 566, 432, 568, 432, 570, 430, 570, 428, 572, 430, 570, 426, 572, 426, 544, 1454, 572, 426, 574, 426, 572, 424, 574, 426, 546, 1450, 576, 424, 548, 1450, 576, 422, 576, 424, 574, 424, 550, 1448, 548, 1450, 548, 1452, 544"
           },
-          "internal": {
-            "peripheralType": "SENSOR",
-            "module": "SCD40"
-          }
-        },
-        {
-          "naturalId": "LUX_ESP32_01",
-          "category": "SENSOR_LUX",
-          "specificType": "GPIO",
-          "controlType": "GPIO",
-          "gpioPin": [
-            8,
-            9
-          ],
-          "translations": {
-            "vi": {
-              "name": "Cảm biến ánh sáng phòng R&D",
-              "description": "Cường độ ánh sáng đo bằng cảm biến BH1750"
-            },
-            "en": {
-              "name": "Room R&D illuminance sensor",
-              "description": "Illuminance measured by BH1750"
-            }
+          "mode": {
+            "COOL": "8248, 3986, 540, 1458, 566, 434, 566, 434, 562, 434, 540, 1460, 568, 430, 566, 432, 540, 462, 564, 432, 542, 456, 568, 432, 542, 458, 512, 1484, 566, 434, 564, 432, 566, 434, 540, 460, 564, 434, 566, 434, 512, 1484, 540, 460, 568, 432, 540, 1454, 572, 430, 540, 1456, 568, 432, 512, 1484, 540, 1458, 516",
+            "HEAT": "8254, 3978, 544, 1454, 572, 428, 568, 430, 568, 430, 542, 1454, 572, 428, 570, 428, 572, 428, 572, 426, 572, 428, 572, 426, 570, 428, 546, 1452, 546, 1452, 570, 430, 570, 430, 568, 430, 544, 1452, 572, 430, 540, 1454, 572, 428, 546, 1452, 572, 428, 544, 1452, 572, 430, 544, 1452, 544, 1456, 544, 456, 544",
+            "DRY": "8250, 3980, 546, 1452, 572, 428, 570, 430, 570, 426, 544, 1454, 572, 428, 570, 428, 570, 428, 570, 430, 570, 428, 570, 428, 570, 430, 542, 1452, 574, 428, 570, 426, 574, 1426, 572, 426, 570, 428, 570, 428, 542, 1454, 570, 430, 566, 430, 570, 430, 568, 430, 544, 1456, 570, 428, 544, 1452, 572, 426, 546",
+            "FAN": "8246, 3982, 540, 1458, 568, 432, 540, 458, 568, 432, 540, 1456, 568, 432, 568, 434, 564, 432, 568, 432, 568, 432, 540, 460, 564, 438, 508, 1484, 570, 430, 540, 1458, 568, 434, 562, 434, 568, 432, 564, 434, 512, 1484, 542, 460, 512, 1482, 540, 460, 568, 432, 540, 1458, 512, 1484, 540, 1458, 516, 1484, 512",
+            "AUTO": "8256, 3974, 548, 1450, 574, 428, 572, 426, 574, 426, 546, 1452, 574, 426, 572, 426, 574, 426, 570, 426, 574, 426, 574, 424, 574, 426, 548, 1450, 574, 426, 548, 1450, 548, 1450, 600, 398, 574, 424, 574, 426, 548, 1450, 574, 422, 548, 1450, 576, 422, 550, 1450, 572, 424, 578, 422, 574, 424, 550, 1448, 550"
           },
-          "internal": {
-            "peripheralType": "SENSOR",
-            "module": "BH1750",
-            "i2cAddress": 35
+          "speed": {
+            "1": "8276, 3954, 568, 1432, 592, 406, 592, 408, 592, 406, 564, 1432, 594, 404, 594, 406, 592, 406, 592, 406, 592, 408, 592, 406, 592, 408, 564, 1434, 592, 404, 568, 1430, 592, 406, 592, 406, 592, 408, 592, 406, 564, 1434, 592, 404, 594, 408, 590, 408, 592, 406, 566, 1432, 592, 408, 564, 1434, 566, 1432, 566",
+            "2": "8272, 3956, 566, 1434, 592, 406, 596, 402, 596, 406, 564, 1432, 592, 406, 592, 404, 594, 406, 592, 406, 594, 404, 594, 406, 592, 406, 568, 1428, 592, 408, 568, 1428, 594, 406, 594, 404, 594, 406, 594, 406, 566, 1430, 596, 402, 596, 406, 566, 1430, 594, 406, 566, 1432, 566, 1430, 594, 406, 566, 1430, 568",
+            "3": "8274, 3956, 566, 1432, 594, 406, 592, 406, 592, 406, 568, 1428, 594, 406, 592, 404, 596, 404, 592, 406, 594, 404, 592, 406, 592, 406, 568, 1432, 592, 406, 566, 1432, 594, 404, 592, 406, 594, 406, 592, 406, 568, 1430, 592, 408, 564, 1432, 596, 404, 592, 406, 568, 1430, 568, 1432, 564, 1432, 568, 1432, 568"
+          },
+          "temperature": {
+            "16": "8254, 3980, 544, 1456, 572, 430, 566, 432, 568, 430, 544, 1452, 572, 430, 542, 458, 566, 432, 570, 426, 572, 428, 568, 432, 568, 430, 542, 1456, 570, 430, 544, 1454, 572, 428, 572, 430, 566, 432, 568, 432, 542, 1454, 570, 430, 544, 1434, 592, 430, 568, 430, 542, 1454, 546, 1454, 544, 1452, 544, 1454, 544",
+            "17": "8252, 3978, 544, 1454, 570, 430, 570, 428, 570, 430, 542, 1454, 568, 430, 572, 426, 572, 428, 568, 430, 572, 426, 572, 426, 572, 426, 542, 1454, 572, 428, 544, 1454, 572, 426, 570, 428, 572, 428, 516, 1480, 572, 428, 572, 428, 544, 1454, 572, 426, 570, 428, 570, 430, 570, 430, 572, 428, 568, 430, 542",
+            "18": "8254, 3978, 546, 1454, 596, 402, 572, 428, 572, 426, 546, 1454, 572, 428, 570, 428, 570, 428, 570, 428, 572, 428, 570, 430, 570, 430, 544, 1454, 570, 430, 544, 1454, 570, 430, 570, 430, 570, 428, 542, 1454, 520, 1480, 572, 426, 544, 1454, 542, 456, 570, 430, 568, 432, 566, 432, 570, 430, 540, 1456, 542",
+            "19": "8246, 3982, 544, 1454, 570, 430, 568, 430, 568, 428, 544, 1454, 572, 426, 572, 426, 572, 426, 572, 426, 568, 430, 572, 424, 574, 424, 542, 1456, 576, 424, 544, 1454, 570, 426, 572, 428, 540, 1456, 574, 428, 570, 428, 572, 428, 544, 1454, 570, 432, 570, 428, 570, 430, 570, 428, 544, 1454, 572, 424, 546",
+            "20": "8252, 3978, 546, 1454, 570, 430, 572, 426, 574, 426, 546, 1452, 572, 428, 572, 430, 566, 430, 572, 426, 572, 426, 572, 426, 572, 428, 544, 1450, 572, 430, 542, 1454, 572, 426, 570, 428, 546, 1454, 570, 430, 542, 1454, 572, 430, 542, 1454, 574, 426, 568, 430, 570, 428, 568, 430, 544, 1452, 544, 1454, 546",
+            "21": "8256, 3978, 542, 1454, 570, 430, 570, 430, 570, 426, 544, 1454, 570, 428, 570, 430, 570, 428, 570, 430, 570, 428, 570, 428, 568, 432, 542, 1454, 570, 428, 544, 1452, 572, 430, 570, 430, 544, 1454, 544, 1456, 572, 428, 566, 432, 542, 1454, 572, 430, 570, 430, 570, 430, 542, 1454, 570, 428, 572, 428, 542",
+            "22": "8254, 3978, 544, 1398, 628, 428, 572, 428, 570, 428, 544, 1452, 572, 430, 568, 432, 568, 428, 572, 430, 570, 428, 572, 428, 570, 428, 542, 1454, 570, 430, 544, 1452, 574, 428, 570, 428, 546, 1452, 544, 1452, 546, 1452, 572, 430, 540, 1454, 572, 428, 570, 428, 570, 428, 546, 1450, 574, 428, 544, 1452, 546",
+            "23": "8254, 3978, 546, 1450, 572, 430, 566, 432, 568, 430, 544, 1454, 570, 430, 570, 428, 570, 430, 566, 432, 570, 430, 570, 428, 568, 428, 542, 1456, 572, 426, 544, 1454, 572, 430, 542, 1456, 568, 432, 568, 430, 570, 430, 568, 430, 544, 1452, 572, 430, 570, 428, 568, 430, 544, 1454, 544, 1454, 568, 430, 542",
+            "24": "8252, 3980, 544, 1454, 572, 426, 570, 430, 568, 430, 544, 1454, 570, 428, 572, 430, 566, 430, 570, 430, 570, 428, 572, 428, 568, 430, 542, 1454, 572, 430, 542, 1454, 572, 428, 544, 1454, 572, 428, 568, 430, 544, 1452, 572, 430, 544, 1452, 544, 456, 568, 430, 568, 432, 542, 1454, 546, 1452, 544, 1454, 546",
+            "25": "8246, 3982, 544, 1454, 568, 432, 566, 432, 540, 460, 538, 1458, 566, 432, 542, 458, 566, 432, 544, 456, 566, 434, 562, 436, 564, 436, 536, 1456, 542, 458, 542, 1458, 566, 434, 514, 1482, 568, 432, 516, 1482, 568, 432, 562, 434, 516, 1482, 566, 432, 540, 462, 536, 1456, 542, 460, 566, 436, 562, 434, 514",
+            "26": "8250, 3982, 544, 1454, 574, 426, 570, 432, 568, 428, 544, 1454, 572, 428, 568, 430, 568, 430, 568, 430, 568, 430, 572, 430, 570, 428, 544, 1454, 544, 456, 544, 1454, 568, 430, 546, 1452, 572, 428, 542, 1456, 546, 1452, 572, 428, 544, 1452, 570, 430, 568, 428, 544, 1452, 572, 428, 570, 428, 544, 1454, 544",
+            "27": "8250, 3982, 486, 1510, 512, 488, 512, 488, 510, 486, 486, 1514, 540, 458, 512, 488, 542, 456, 542, 458, 542, 458, 540, 458, 512, 488, 484, 1512, 542, 458, 512, 1486, 512, 488, 486, 1510, 516, 1482, 542, 458, 512, 486, 542, 458, 486, 1514, 510, 486, 544, 458, 512, 1484, 540, 458, 486, 1514, 542, 458, 486",
+            "28": "8252, 3978, 546, 1454, 570, 430, 572, 428, 572, 428, 542, 1454, 572, 430, 568, 428, 572, 428, 570, 428, 570, 430, 572, 426, 568, 430, 544, 1452, 572, 428, 546, 1452, 570, 430, 544, 1454, 542, 1454, 568, 434, 544, 1452, 572, 428, 544, 1454, 572, 426, 570, 430, 542, 1456, 570, 430, 542, 1452, 546, 1454, 544",
+            "29": "8246, 3986, 540, 1458, 566, 432, 570, 430, 566, 432, 540, 1456, 570, 432, 540, 458, 542, 462, 536, 458, 566, 432, 542, 458, 564, 434, 538, 1458, 568, 432, 514, 1482, 570, 430, 516, 1482, 540, 1456, 516, 1482, 544, 458, 564, 434, 540, 1458, 542, 458, 566, 432, 540, 1454, 544, 1454, 542, 460, 566, 432, 514",
+            "30": "8252, 3982, 540, 1456, 542, 458, 568, 434, 566, 430, 544, 1456, 568, 430, 568, 430, 570, 432, 568, 430, 568, 434, 564, 426, 572, 430, 514, 1482, 572, 430, 538, 1458, 568, 430, 544, 1454, 544, 1454, 570, 1426, 548, 1454, 570, 432, 540, 1454, 572, 428, 568, 432, 544, 1454, 542, 1456, 570, 430, 540, 1456, 544"
+          },
+          "swing": {
+            "ON": "8274, 3956, 566, 1430, 596, 406, 594, 404, 596, 406, 566, 1430, 594, 404, 594, 406, 590, 408, 594, 406, 594, 406, 594, 406, 566, 1430, 592, 406, 592, 406, 594, 406, 594, 406, 594, 406, 594, 406, 592, 408, 592, 404, 596, 406, 590, 406, 594, 406, 594, 404, 594, 406, 594, 406, 594, 406, 566, 1430, 568",
+            "OFF": "8250, 3978, 546, 1452, 572, 428, 572, 428, 572, 428, 542, 1452, 574, 428, 568, 430, 568, 430, 568, 430, 568, 428, 546, 454, 542, 1430, 592, 430, 574, 428, 568, 428, 570, 430, 568, 430, 568, 428, 570, 428, 572, 428, 572, 426, 570, 428, 572, 428, 568, 430, 572, 426, 572, 430, 568, 428, 546, 1454, 544"
           }
         }
-    ]
+      }
+    }
+  ]
 }
+
 )rawliteral";
 
 int activeRelayPins[13];
@@ -165,12 +179,28 @@ struct BH1750CachedData
 
 BH1750CachedData bh1750CachedData;
 
+// PZEM004T v3.0 Energy Meter
+struct PZEMCachedData {
+  float voltage = 0.0;      // V (Volts)
+  float current = 0.0;      // A (Amperes)
+  float power = 0.0;        // W (Watts)
+  float energy = 0.0;       // kWh (KiloWatt-hours)
+  float frequency = 0.0;    // Hz (Hertz)
+  float powerFactor = 0.0;  // cos(phi) 0.00 - 1.00
+  unsigned long lastReadTime = 0;
+  bool isValid = false;
+};
+
+PZEMCachedData pzemCachedData;
+PZEM004Tv30 *pzem = nullptr;  // Pointer to PZEM object, initialized from config
+bool isPzemInitialized = false;
+
 char secret_key[] = "ABC@123";
 CustomJWT jwt(secret_key, 256);
 
 const char *ssid = "A101CNTT";
 const char *password = "fit@123456789";
-IPAddress local_IP(172, 16, 65, 250);
+IPAddress local_IP(172, 16, 65, 254);
 IPAddress gateway(172, 16, 0, 1);
 IPAddress subnet(255, 255, 0, 0);
 
@@ -179,8 +209,8 @@ IPAddress secondaryDNS(8, 8, 4, 4);
 
 WebServer server(8080);
 
-String serverUsername = "rndesp32gateway";
-String serverPassword = "iuhrndesp32gateway";
+String serverUsername = "vuesp";
+String serverPassword = "123456789";
 
 const char *headerKeys[] = {"Authorization", "Origin"};
 size_t headerKeysCount = sizeof(headerKeys) / sizeof(char *);
@@ -243,6 +273,10 @@ void handleTelemetry();
 void initAllSensors();
 void scd40BackgroundTask(void *parameter);
 void startSCD40BackgroundTask();
+bool readPZEMData(float &voltage, float &current, float &power, float &energy, float &frequency, float &powerFactor);
+bool readPZEMDataWithPins(PZEM004Tv30 &pzemInstance, float &voltage, float &current, float &power, float &energy, float &frequency, float &powerFactor);
+void handleGetTelemetryByDevice();
+void handleResetEnergy();
 
 bool syncTimeFromApi(const String &timeApiUrl)
 {
@@ -463,34 +497,182 @@ bool findDeviceInConfig(const JsonDocument &configDoc, const String &naturalId, 
   return false;
 }
 
-bool readIrCodeValue(const JsonVariantConst &value, uint32_t &code)
+// Parse raw IR code string to uint16_t array
+// Input: "9128,4488,624,1624,..." or "9128, 4488, 624, 1624, ..."
+// Output: array of uint16_t values
+uint16_t parseRawIrCode(const String &codeStr, uint16_t *outputArray, uint16_t maxLen)
 {
-  if (value.isNull())
+  uint16_t count = 0;
+  int startIdx = 0;
+  int endIdx = codeStr.indexOf(',');
+
+  while (endIdx != -1 && count < maxLen)
   {
+    String token = codeStr.substring(startIdx, endIdx);
+    token.trim();
+    if (token.length() > 0)
+    {
+      outputArray[count++] = (uint16_t)token.toInt();
+    }
+    startIdx = endIdx + 1;
+    endIdx = codeStr.indexOf(',', startIdx);
+  }
+
+  // Get last element after final comma
+  if (startIdx < codeStr.length() && count < maxLen)
+  {
+    String token = codeStr.substring(startIdx);
+    token.trim();
+    if (token.length() > 0)
+    {
+      outputArray[count++] = (uint16_t)token.toInt();
+    }
+  }
+
+  return count;
+}
+
+// Send raw IR code
+bool sendRawIrCode(const String &rawCodeStr)
+{
+  if (irsend == nullptr)
+  {
+    Serial.println("Lỗi: IRsend object chưa được khởi tạo!");
     return false;
   }
 
-  if (value.is<const char *>())
+  // Allocate buffer for raw IR codes (max 300 elements should be enough)
+  uint16_t rawBuffer[300];
+  uint16_t length = parseRawIrCode(rawCodeStr, rawBuffer, 300);
+
+  if (length == 0)
   {
-    const char *rawValue = value.as<const char *>();
-    if (rawValue == nullptr || rawValue[0] == '\0')
-    {
-      return false;
-    }
-
-    char *endPtr = nullptr;
-    unsigned long parsed = strtoul(rawValue, &endPtr, 0);
-    if (endPtr == rawValue || (endPtr != nullptr && *endPtr != '\0'))
-    {
-      return false;
-    }
-
-    code = static_cast<uint32_t>(parsed);
-    return true;
+    Serial.println("Lỗi: Chuỗi mã IR trống hoặc không hợp lệ!");
+    return false;
   }
 
-  code = value.as<uint32_t>();
-  return code != 0;
+  Serial.printf("[IR SEND] Phát %d phần tử, mã IR: ", length);
+  for (uint16_t i = 0; i < (length < 10 ? length : 10); i++)
+  {
+    Serial.printf("%u%s", rawBuffer[i], i < length - 1 ? "," : "");
+  }
+  if (length > 10)
+    Serial.print("...");
+  Serial.println();
+
+  // Send raw IR code (38kHz is standard IR frequency)
+  irsend->sendRaw(rawBuffer, length, 38);
+
+  Serial.println("[IR SEND] Phát thành công!");
+  return true;
+}
+
+// Get raw IR code from config by naturalId and command key
+bool getAcRawCodeFromConfig(const JsonDocument &configDoc, const String &naturalId,
+                            const String &section, const String &key, String &codeOut)
+{
+  // Find device from config
+  JsonArrayConst devicesArray;
+  if (configDoc.containsKey("devices"))
+  {
+    devicesArray = configDoc["devices"].as<JsonArrayConst>();
+  }
+  else if (configDoc.is<JsonArrayConst>())
+  {
+    devicesArray = configDoc.as<JsonArrayConst>();
+  }
+  else
+  {
+    Serial.println("Lỗi: Không tìm thấy devices trong config!");
+    return false;
+  }
+
+  JsonObjectConst targetDevice;
+  bool deviceFound = false;
+  for (JsonObjectConst device : devicesArray)
+  {
+    if (device["naturalId"].as<String>() == naturalId)
+    {
+      targetDevice = device;
+      deviceFound = true;
+      break;
+    }
+  }
+
+  if (!deviceFound || !targetDevice.containsKey("internal"))
+  {
+    Serial.printf("Lỗi: Không tìm thấy device '%s' hoặc thiếu field 'internal'\n", naturalId.c_str());
+    return false;
+  }
+
+  // Get internal object
+  JsonObjectConst internalObj = targetDevice["internal"].as<JsonObjectConst>();
+
+  // Verify peripheralType
+  if (!internalObj.containsKey("peripheralType"))
+  {
+    Serial.printf("Lỗi: Device '%s' thiếu field 'internal.peripheralType'\n", naturalId.c_str());
+    return false;
+  }
+
+  String peripheralType = internalObj["peripheralType"].as<String>();
+  if (peripheralType != "IR_SENDER")
+  {
+    Serial.printf("Lỗi: Device '%s' không phải IR_SENDER (là %s)\n", naturalId.c_str(), peripheralType.c_str());
+    return false;
+  }
+
+  // Get irCodes from internal
+  if (!internalObj.containsKey("irCodes") || !internalObj["irCodes"].is<JsonObjectConst>())
+  {
+    Serial.printf("Lỗi: Device '%s' thiếu field 'internal.irCodes'\n", naturalId.c_str());
+    return false;
+  }
+
+  JsonObjectConst irCodes = internalObj["irCodes"].as<JsonObjectConst>();
+
+  // Get section (e.g., "power", "mode", "temperature")
+  if (!irCodes.containsKey(section) || !irCodes[section].is<JsonObjectConst>())
+  {
+    Serial.printf("Lỗi: Thiếu section '%s' trong irCodes\n", section.c_str());
+    return false;
+  }
+
+  JsonObjectConst sectionObject = irCodes[section].as<JsonObjectConst>();
+
+  // Get key (e.g., "ON", "COOL", "16")
+  if (!sectionObject.containsKey(key))
+  {
+    Serial.printf("Lỗi: Thiếu key '%s' trong section '%s'\n", key.c_str(), section.c_str());
+    return false;
+  }
+
+  // Get raw code string
+  JsonVariantConst codeVariant = sectionObject[key];
+  if (codeVariant.isNull())
+  {
+    Serial.printf("Lỗi: Giá trị rỗng cho key '%s'\n", key.c_str());
+    return false;
+  }
+
+  codeOut = codeVariant.as<String>();
+  return !codeOut.isEmpty();
+}
+
+// Send AC code from config using raw IR codes
+bool sendAcRawCodeFromConfig(const JsonDocument &configDoc, const String &naturalId,
+                             const String &section, const String &key, const String &label)
+{
+  String rawCode;
+
+  if (!getAcRawCodeFromConfig(configDoc, naturalId, section, key, rawCode))
+  {
+    Serial.printf("Lỗi: Không tìm thấy mã AC cho %s.%s.%s\n", naturalId.c_str(), section.c_str(), key.c_str());
+    return false;
+  }
+
+  Serial.printf("[Thực thi] %s -> Raw IR Code\n", label.c_str());
+  return sendRawIrCode(rawCode);
 }
 
 struct BrandIrSender
@@ -642,6 +824,37 @@ uint16_t getAcBitsFromCodeConfigs(const JsonObjectConst &codeConfigs)
   }
 
   return codeConfigs["bits"] | 28;
+}
+
+// Parse IR code value from config (legacy support for hex codes)
+bool readIrCodeValue(const JsonVariantConst &value, uint32_t &code)
+{
+  if (value.isNull())
+  {
+    return false;
+  }
+
+  if (value.is<const char *>())
+  {
+    const char *rawValue = value.as<const char *>();
+    if (rawValue == nullptr || rawValue[0] == '\0')
+    {
+      return false;
+    }
+
+    char *endPtr = nullptr;
+    unsigned long parsed = strtoul(rawValue, &endPtr, 0);
+    if (endPtr == rawValue || (endPtr != nullptr && *endPtr != '\0'))
+    {
+      return false;
+    }
+
+    code = static_cast<uint32_t>(parsed);
+    return true;
+  }
+
+  code = value.as<uint32_t>();
+  return code != 0;
 }
 
 bool getAcCommandCodeFromConfig(const JsonDocument &configDoc, const String &naturalId, const String &section, const String &key, uint32_t &code, uint16_t &bits, String &brand)
@@ -840,7 +1053,7 @@ bool turnOnAC(const String &naturalId)
     return false;
   }
 
-  return sendAcCodeFromConfig(configDoc, naturalId, "power", "ON", "turnOnAC()");
+  return sendAcRawCodeFromConfig(configDoc, naturalId, "power", "ON", "turnOnAC()");
 }
 
 bool turnOffAC(const String &naturalId)
@@ -852,7 +1065,7 @@ bool turnOffAC(const String &naturalId)
     return false;
   }
 
-  return sendAcCodeFromConfig(configDoc, naturalId, "power", "OFF", "turnOffAC()");
+  return sendAcRawCodeFromConfig(configDoc, naturalId, "power", "OFF", "turnOffAC()");
 }
 
 bool toggleSwingAC(const String &naturalId)
@@ -875,7 +1088,7 @@ bool setSwingAC(const String &naturalId, String state)
     return false;
   }
 
-  return sendAcCodeFromConfig(configDoc, naturalId, "swing", state, "setSwingAC()");
+  return sendAcRawCodeFromConfig(configDoc, naturalId, "swing", state, "setSwingAC()");
 }
 
 bool setModeAC(const String &naturalId, String mode)
@@ -887,7 +1100,7 @@ bool setModeAC(const String &naturalId, String mode)
     return false;
   }
 
-  if (!sendAcCodeFromConfig(configDoc, naturalId, "mode", mode, "setModeAC()"))
+  if (!sendAcRawCodeFromConfig(configDoc, naturalId, "mode", mode, "setModeAC()"))
   {
     Serial.print("Lỗi: Tham số chế độ '");
     Serial.print(mode);
@@ -913,7 +1126,7 @@ bool setFanSpeedAC(const String &naturalId, int speed)
     return false;
   }
 
-  if (!sendAcCodeFromConfig(configDoc, naturalId, "speed", String(speed), "setFanSpeedAC()"))
+  if (!sendAcRawCodeFromConfig(configDoc, naturalId, "speed", String(speed), "setFanSpeedAC()"))
   {
     Serial.printf("Lỗi: Thiếu cấu hình cho speed %d!\n", speed);
     return false;
@@ -937,7 +1150,7 @@ bool setTemperatureAC(const String &naturalId, int temp)
     return false;
   }
 
-  if (!sendAcCodeFromConfig(configDoc, naturalId, "temperature", String(temp), "setTemperatureAC()"))
+  if (!sendAcRawCodeFromConfig(configDoc, naturalId, "temperature", String(temp), "setTemperatureAC()"))
   {
     Serial.printf("Lỗi: Thiếu cấu hình cho nhiệt độ %d!\n", temp);
     return false;
@@ -2518,6 +2731,60 @@ void handleTelemetry()
   Serial.println("------------------------------------------");
 }
 
+// Read PZEM004Tv30 energy meter data
+bool readPZEMData(float &voltage, float &current, float &power, float &energy, float &frequency, float &powerFactor)
+{
+  if (pzem == nullptr || !isPzemInitialized)
+  {
+    Serial.println("Lỗi: PZEM chưa được khởi tạo!");
+    return false;
+  }
+
+  // Read all values from PZEM
+  voltage = pzem->voltage();
+  current = pzem->current();
+  power = pzem->power();
+  energy = pzem->energy();
+  frequency = pzem->frequency();
+  powerFactor = pzem->pf();
+
+  // Validate readings - PZEM returns NaN on error
+  if (isnan(voltage) || isnan(current) || isnan(power) || isnan(energy) || isnan(frequency) || isnan(powerFactor))
+  {
+    Serial.println("[PZEM] Lỗi: Không thể đọc dữ liệu từ PZEM!");
+    return false;
+  }
+
+  Serial.printf("[PZEM] V=%.2fV, I=%.2fA, P=%.2fW, E=%.2fkWh, F=%.2fHz, PF=%.2f\n",
+                voltage, current, power, energy, frequency, powerFactor);
+
+  return true;
+}
+
+// Read PZEM data from a specific PZEM object (for device-specific measurements)
+bool readPZEMDataWithPins(PZEM004Tv30 &pzemInstance, float &voltage, float &current, float &power, float &energy, float &frequency, float &powerFactor)
+{
+  // Read all values from the provided PZEM instance
+  voltage = pzemInstance.voltage();
+  current = pzemInstance.current();
+  power = pzemInstance.power();
+  energy = pzemInstance.energy();
+  frequency = pzemInstance.frequency();
+  powerFactor = pzemInstance.pf();
+
+  // Validate readings - PZEM returns NaN on error
+  if (isnan(voltage) || isnan(current) || isnan(power) || isnan(energy) || isnan(frequency) || isnan(powerFactor))
+  {
+    Serial.println("[PZEM-DEVICE] Lỗi: Không thể đọc dữ liệu từ PZEM!");
+    return false;
+  }
+
+  Serial.printf("[PZEM-DEVICE] V=%.2fV, I=%.2fA, P=%.2fW, E=%.2fkWh, F=%.2fHz, PF=%.2f\n",
+                voltage, current, power, energy, frequency, powerFactor);
+
+  return true;
+}
+
 void initAllSensors()
 {
   Serial.println("\n========================================");
@@ -2663,6 +2930,62 @@ void initAllSensors()
     break; // Chỉ dùng một BH1750 trên board này
   }
 
+  // Scan config để init PZEM energy meter
+  for (JsonObjectConst device : devicesArray)
+  {
+    String category = device["category"].as<String>();
+    String specificType = device["specificType"].as<String>();
+    
+    if (category != "POWER_CONSUMPTION" || specificType != "PZEM")
+    {
+      continue;
+    }
+
+    // Found PZEM device
+    Serial.printf("[SENSOR INIT] Initializing PZEM: %s\n",
+                  device["naturalId"].as<const char *>());
+
+    // Initialize PZEM with Serial2 (default for ESP32 PZEM shield)
+    // Serial2.begin() will be called internally by PZEM004Tv30
+    // Constructor: PZEM004Tv30(HardwareSerial& port, uint8_t receivePin, uint8_t transmitPin, uint8_t addr)
+    // We need to pass references and pins even though Serial2 already has them configured
+    pzem = new PZEM004Tv30(Serial2, 16, 17, 0x01);  // Serial2, RX=16, TX=17, addr=0x01
+
+    delay(100);  // Wait for UART initialization
+
+    // Try to read initial values to verify connection
+    float voltage = pzem->voltage();
+    if (!isnan(voltage))
+    {
+      float current = pzem->current();
+      float power = pzem->power();
+      float energy = pzem->energy();
+      float frequency = pzem->frequency();
+      float powerFactor = pzem->pf();
+
+      pzemCachedData.voltage = voltage;
+      pzemCachedData.current = current;
+      pzemCachedData.power = power;
+      pzemCachedData.energy = energy;
+      pzemCachedData.frequency = frequency;
+      pzemCachedData.powerFactor = powerFactor;
+      pzemCachedData.lastReadTime = millis();
+      pzemCachedData.isValid = true;
+      isPzemInitialized = true;
+
+      Serial.printf("[SENSOR INIT] PZEM initialized successfully!\n");
+      Serial.printf("[SENSOR INIT] First read: V=%.2fV, I=%.2fA, P=%.2fW, E=%.2fkWh\n",
+                    voltage, current, power, energy);
+    }
+    else
+    {
+      Serial.println("[SENSOR INIT] PZEM initialization failed - no response from device!");
+      Serial.println("[SENSOR INIT] Check UART connections and slave address");
+    }
+
+    break; // Only one PZEM per board
+  }
+
   Serial.println("========================================");
   Serial.println("[SENSOR INITIALIZATION] Hoàn tất");
   Serial.println("========================================\n");
@@ -2745,6 +3068,30 @@ void scd40BackgroundTask(void *parameter)
       }
     }
 
+    // Đọc PZEM nếu đã khởi tạo
+    if (isPzemInitialized && pzem != nullptr)
+    {
+      float voltage, current, power, energy, frequency, powerFactor;
+      
+      if (readPZEMData(voltage, current, power, energy, frequency, powerFactor))
+      {
+        pzemCachedData.voltage = voltage;
+        pzemCachedData.current = current;
+        pzemCachedData.power = power;
+        pzemCachedData.energy = energy;
+        pzemCachedData.frequency = frequency;
+        pzemCachedData.powerFactor = powerFactor;
+        pzemCachedData.lastReadTime = millis();
+        pzemCachedData.isValid = true;
+
+        Serial.printf("[PZEM BACKGROUND] Energy: %.2fkWh, Power: %.2fW\n", energy, power);
+      }
+      else
+      {
+        Serial.println("[PZEM BACKGROUND] Failed to read PZEM data");
+      }
+    }
+
     delay(30000); // Cập nhật cache mỗi 30 giây
   }
 
@@ -2756,14 +3103,14 @@ void scd40BackgroundTask(void *parameter)
 void startSCD40BackgroundTask()
 {
   if (!scd40BackgroundTaskRunning &&
-      (isScd40Initialized || isBh1750Initialized))
+      (isScd40Initialized || isBh1750Initialized || isPzemInitialized))
   {
     scd40BackgroundTaskRunning = true;
     
     // Tạo FreeRTOS task (priority 1, stack size 4096, core 1)
     xTaskCreatePinnedToCore(
       scd40BackgroundTask,           // Task function
-      "SCD40 Background",            // Task name
+      "Sensor Background",           // Task name
       4096,                          // Stack size
       NULL,                          // Parameters
       1,                             // Priority
@@ -2773,6 +3120,254 @@ void startSCD40BackgroundTask()
     
     Serial.println("[SENSOR] Background task started successfully");
   }
+}
+
+// Get device-specific telemetry by deviceCategory and naturalId
+void handleGetTelemetryByDevice()
+{
+  sendCORSHeaders();
+  Serial.println("------------------------------------------");
+  Serial.println("Endpoint:/devices/telemetry");
+
+  String token;
+  if (!requireBearerToken(token))
+  {
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  // Get query parameters
+  String deviceCategory = server.hasArg("deviceCategory") ? server.arg("deviceCategory") : "";
+  String naturalId = server.hasArg("naturalId") ? server.arg("naturalId") : "";
+
+  if (deviceCategory.length() == 0 || naturalId.length() == 0)
+  {
+    sendJson(400, "Query parameters required: ?deviceCategory=...&naturalId=...");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  Serial.printf("[REQUEST] deviceCategory: %s, naturalId: %s\n", deviceCategory.c_str(), naturalId.c_str());
+
+  JsonDocument configDoc;
+  if (deserializeJson(configDoc, config))
+  {
+    sendJson(500, "Lỗi thiết bị khi parse JSON");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonArrayConst devicesArray;
+  if (configDoc.containsKey("devices"))
+  {
+    devicesArray = configDoc["devices"].as<JsonArrayConst>();
+  }
+  else
+  {
+    sendJson(500, "Lỗi thiết bị khi parse JSON");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonObjectConst targetDevice;
+  bool deviceFound = false;
+  for (JsonObjectConst device : devicesArray)
+  {
+    String category = device["category"].as<String>();
+    if (category == deviceCategory && device["naturalId"].as<String>() == naturalId)
+    {
+      targetDevice = device;
+      deviceFound = true;
+      Serial.printf("[DEVICE FOUND] naturalId: %s, category: %s\n", naturalId.c_str(), deviceCategory.c_str());
+      break;
+    }
+  }
+
+  if (!deviceFound)
+  {
+    Serial.printf("[DEVICE NOT FOUND] naturalId: %s, category: %s\n", naturalId.c_str(), deviceCategory.c_str());
+    sendJson(404, "Không tìm thấy thiết bị có naturalId tương ứng");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  // Build energy object response based on category
+  JsonDocument data;
+  data["timestamp"] = getCurrentTimestamp();
+
+  if (deviceCategory == "POWER_CONSUMPTION")
+  {
+    if (!isPzemInitialized || !pzemCachedData.isValid)
+    {
+      sendJson(500, "Lỗi: Dữ liệu PZEM chưa sẵn sàng, vui lòng chờ");
+      Serial.println("------------------------------------------");
+      return;
+    }
+
+    data["voltage"] = pzemCachedData.voltage;
+    data["current"] = pzemCachedData.current;
+    data["power"] = pzemCachedData.power;
+    data["energy"] = pzemCachedData.energy;
+    data["frequency"] = pzemCachedData.frequency;
+    data["powerFactor"] = pzemCachedData.powerFactor;
+
+    Serial.printf("[TELEMETRY] Device %s: V=%.2fV, I=%.2fA, P=%.2fW\n",
+                  naturalId.c_str(), pzemCachedData.voltage, pzemCachedData.current, pzemCachedData.power);
+  }
+  else if (deviceCategory == "LIGHT" || deviceCategory == "FAN" || deviceCategory == "AIR_CONDITION")
+  {
+    // For other categories (FAN, LIGHT, AIR_CONDITION), check for consumption.power.gpioPin
+    Serial.printf("[DEBUG] Checking device %s for consumption config\n", naturalId.c_str());
+    
+    if (targetDevice.containsKey("consumption"))
+    {
+      Serial.println("[DEBUG] Device has consumption key");
+      
+      if (targetDevice["consumption"].containsKey("power"))
+      {
+        Serial.println("[DEBUG] Device has consumption.power key");
+        
+        if (targetDevice["consumption"]["power"].containsKey("gpioPin"))
+        {
+          Serial.println("[DEBUG] Device has consumption.power.gpioPin key");
+          
+          JsonArrayConst pzemPins = targetDevice["consumption"]["power"]["gpioPin"].as<JsonArrayConst>();
+          if (pzemPins.size() >= 2)
+          {
+            uint8_t rx = pzemPins[0].as<uint8_t>();
+            uint8_t tx = pzemPins[1].as<uint8_t>();
+            
+            Serial.printf("[DEVICE PZEM] Device %s has consumption pins: RX=%d, TX=%d\n", 
+                         naturalId.c_str(), rx, tx);
+            
+            // Create temporary PZEM object for this device
+            PZEM004Tv30 tempPzem(Serial2, rx, tx, 0x01);
+            delay(100);
+            
+            float voltage, current, power, energy, frequency, powerFactor;
+            
+            // Try to read from this specific device PZEM
+            if (readPZEMDataWithPins(tempPzem, voltage, current, power, energy, frequency, powerFactor))
+            {
+              data["voltage"] = voltage;
+              data["current"] = current;
+              data["power"] = power;
+              data["energy"] = energy;
+              data["frequency"] = frequency;
+              data["powerFactor"] = powerFactor;
+              
+              Serial.printf("[TELEMETRY] Device %s: V=%.2fV, I=%.2fA, P=%.2fW\n",
+                           naturalId.c_str(), voltage, current, power);
+            }
+            else
+            {
+              sendJson(500, "Không thể đọc dữ liệu từ PZEM của thiết bị");
+              Serial.println("------------------------------------------");
+              return;
+            }
+          }
+          else
+          {
+            sendJson(400, "Cấu hình gpioPin không hợp lệ cho thiết bị");
+            Serial.println("------------------------------------------");
+            return;
+          }
+        }
+        else
+        {
+          Serial.println("[DEBUG] Device missing consumption.power.gpioPin");
+          sendJson(400, "Loại thiết bị không hỗ trợ telemetry năng lượng");
+          Serial.println("------------------------------------------");
+          return;
+        }
+      }
+      else
+      {
+        Serial.println("[DEBUG] Device missing consumption.power");
+        sendJson(400, "Loại thiết bị không hỗ trợ telemetry năng lượng");
+        Serial.println("------------------------------------------");
+        return;
+      }
+    }
+    else
+    {
+      Serial.println("[DEBUG] Device missing consumption key");
+      sendJson(400, "Loại thiết bị không hỗ trợ telemetry năng lượng");
+      Serial.println("------------------------------------------");
+      return;
+    }
+  }
+  else
+  {
+    sendJson(400, "Loại thiết bị không hỗ trợ telemetry năng lượng");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  sendJsonWithData(200, "Success", data);
+  Serial.println("------------------------------------------");
+}
+
+// Reset energy accumulation for a device
+void handleResetEnergy()
+{
+  sendCORSHeaders();
+  Serial.println("------------------------------------------");
+  Serial.println("Endpoint:/devices/reset-energy");
+
+  String token;
+  if (!requireBearerToken(token))
+  {
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  JsonDocument jsonBody;
+  if (!parsePlainBody(jsonBody))
+  {
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  String deviceCategory = jsonBody["deviceCategory"].as<String>();
+  String naturalId = jsonBody["naturalId"].as<String>();
+
+  if (deviceCategory.length() == 0 || naturalId.length() == 0)
+  {
+    sendJson(400, "Body required: {\"deviceCategory\": \"...\", \"naturalId\": \"...\"}");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  Serial.printf("[REQUEST] Reset energy for: %s (%s)\n", naturalId.c_str(), deviceCategory.c_str());
+
+  if (deviceCategory != "POWER_CONSUMPTION")
+  {
+    sendJson(400, "Chỉ có thể reset năng lượng cho thiết bị POWER_CONSUMPTION");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  if (pzem == nullptr || !isPzemInitialized)
+  {
+    sendJson(500, "Lỗi: PZEM chưa được khởi tạo");
+    Serial.println("------------------------------------------");
+    return;
+  }
+
+  // Reset PZEM energy accumulation
+  if (pzem->resetEnergy())
+  {
+    Serial.println("[PZEM] Energy reset successfully");
+    sendJson(200, "Energy metric reset successfully");
+  }
+  else
+  {
+    Serial.println("[PZEM] Energy reset failed");
+    sendJson(500, "Lỗi: Không thể reset năng lượng");
+  }
+
+  Serial.println("------------------------------------------");
 }
 
 void setup()
@@ -2887,6 +3482,8 @@ void setup()
   server.on("/lux", HTTP_GET, handleGetLux);
   server.on("/setup", HTTP_GET, handleGetConfig);
   server.on("/telemetry", HTTP_GET, handleTelemetry);
+  server.on("/devices/telemetry", HTTP_GET, handleGetTelemetryByDevice);
+  server.on("/devices/reset-energy", HTTP_POST, handleResetEnergy);
 
   server.on("/auth/login", HTTP_OPTIONS, handleCORS);
   server.on("/control", HTTP_OPTIONS, handleCORS);
@@ -2896,6 +3493,8 @@ void setup()
   server.on("/lux", HTTP_OPTIONS, handleCORS);
   server.on("/setup", HTTP_OPTIONS, handleCORS);
   server.on("/telemetry", HTTP_OPTIONS, handleCORS);
+  server.on("/devices/telemetry", HTTP_OPTIONS, handleCORS);
+  server.on("/devices/reset-energy", HTTP_OPTIONS, handleCORS);
 
   server.onNotFound(handleNotFound);
   server.begin();
