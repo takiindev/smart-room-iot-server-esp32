@@ -195,11 +195,11 @@ PZEMCachedData pzemCachedData;
 PZEM004Tv30 *pzem = nullptr;  // Pointer to PZEM object, initialized from config
 bool isPzemInitialized = false;
 
-char secret_key[] = "ABC@123";
+char secret_key[] = "";
 CustomJWT jwt(secret_key, 256);
 
-const char *ssid = "A101CNTT";
-const char *password = "fit@123456789";
+const char *ssid = "";
+const char *password = "";
 IPAddress local_IP(172, 16, 65, 254);
 IPAddress gateway(172, 16, 0, 1);
 IPAddress subnet(255, 255, 0, 0);
@@ -209,8 +209,8 @@ IPAddress secondaryDNS(8, 8, 4, 4);
 
 WebServer server(8080);
 
-String serverUsername = "vuesp";
-String serverPassword = "123456789";
+String serverUsername = "";
+String serverPassword = "";
 
 const char *headerKeys[] = {"Authorization", "Origin"};
 size_t headerKeysCount = sizeof(headerKeys) / sizeof(char *);
